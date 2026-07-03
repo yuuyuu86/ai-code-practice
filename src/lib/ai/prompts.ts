@@ -64,7 +64,7 @@ A + B の値を1行で出力する。
 - 難易度: ${input.difficulty}
 - 単元: ${input.topic}(${langName}の初心者向け)
 - 標準入力から読み、標準出力に書くだけで解ける、出力が一意に決まる問題にする。
-- 乱数・時刻・ファイル・ネットワークは使わない。値は int の範囲。
+- 乱数・時刻・ファイル・ネットワークは使わない。「乱数」「ランダム」という言葉も問題文に書かない(入力は [INPUTS] に固定の値として与える)。値は int の範囲。
 - [INPUTS] は ==== の行で区切って5個。すべて [INPUT_FORMAT] に従う有効な入力にする。${sourceSection}${failureSection}`;
 
   return { system, user };
