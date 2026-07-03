@@ -3,6 +3,7 @@
 import type { Difficulty, Language, Problem } from "@/types/problem";
 import ProblemControls from "@/components/problem/ProblemControls";
 import ProblemCard from "@/components/problem/ProblemCard";
+import GenerationProgress, { type GenerationView } from "@/components/problem/GenerationProgress";
 
 type Props = {
   language: Language;
@@ -11,7 +12,7 @@ type Props = {
   problem: Problem | null;
   fromCache: boolean;
   generating: boolean;
-  generateLabel: string | null;
+  genView: GenerationView | null;
   generateError: string | null;
   onLanguageChange: (l: Language) => void;
   onDifficultyChange: (d: Difficulty) => void;
@@ -27,12 +28,13 @@ export default function LeftPanel(props: Props) {
         difficulty={props.difficulty}
         topic={props.topic}
         generating={props.generating}
-        generateLabel={props.generateLabel}
         onLanguageChange={props.onLanguageChange}
         onDifficultyChange={props.onDifficultyChange}
         onTopicChange={props.onTopicChange}
         onGenerate={props.onGenerate}
       />
+
+      {props.generating && props.genView && <GenerationProgress view={props.genView} />}
 
       {props.generateError && (
         <div className="whitespace-pre-wrap rounded-2xl border border-orange-200 bg-orange-50 p-4 text-xs leading-relaxed text-orange-700">

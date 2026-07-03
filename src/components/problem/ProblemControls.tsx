@@ -8,7 +8,6 @@ type Props = {
   difficulty: Difficulty;
   topic: string;
   generating: boolean;
-  generateLabel: string | null;
   onLanguageChange: (l: Language) => void;
   onDifficultyChange: (d: Difficulty) => void;
   onTopicChange: (t: string) => void;
@@ -69,17 +68,13 @@ export default function ProblemControls(props: Props) {
         <button
           onClick={props.onGenerate}
           disabled={props.generating}
-          className="mt-1 w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
+          className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
+          {props.generating && (
+            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+          )}
           {props.generating ? "生成中…" : "問題を生成"}
         </button>
-
-        {props.generating && props.generateLabel && (
-          <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-600">
-            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-            <span className="min-w-0 flex-1 truncate">{props.generateLabel}</span>
-          </div>
-        )}
       </div>
     </div>
   );
