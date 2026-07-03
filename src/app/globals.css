@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), -apple-system, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
 }
+
+/* 生成中ローディングの演出用アニメーション */
+@keyframes gendot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.2;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+@keyframes genfade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

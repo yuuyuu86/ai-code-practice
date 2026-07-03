@@ -12,6 +12,7 @@ import { getDraft, saveDraft } from "@/lib/storage/drafts";
 import { getGeneratedProblem } from "@/lib/storage/problems";
 import { clearSubmissions, deleteSubmission, listSubmissions, saveSubmission } from "@/lib/storage/submissions";
 import { getSetting, setSetting } from "@/lib/storage/settings";
+import type { GenerationView } from "@/components/problem/GenerationProgress";
 import LeftPanel from "./LeftPanel";
 import EditorPanel from "./EditorPanel";
 import HistorySidebar from "./HistorySidebar";
@@ -24,7 +25,7 @@ export default function AppShell() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [fromCache, setFromCache] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [generateLabel, setGenerateLabel] = useState<string | null>(null);
+  const [genView, setGenView] = useState<GenerationView | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   const [code, setCode] = useState(getLanguageConfig("python").template);
@@ -86,7 +87,7 @@ export default function AppShell() {
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     setGenerateError(null);
-    setGenerateLabel("準備中…");
+    setGenView({ phase: "preparing", modelPct: null, attempt: 1 });
     setJudgeResult(null);
     setReview(null);
     setSelectedSubmissionId(null);
@@ -94,18 +95,13 @@ export default function AppShell() {
     try {
       const result = await generateProblem({ language, difficulty, topic }, (p) => {
         if (p.phase === "loading-model") {
-          const pct = Math.round(p.detail.progress * 100);
-          setGenerateLabel(`AIモデルを読み込み中… ${pct}%(初回は数分かかります)`);
-        } else if (p.phase === "drafting-outline") {
-          setGenerateLabel(`AIが問題の骨格を考えています…(${p.attempt}回目)`);
-        } else if (p.phase === "drafting-details") {
-          setGenerateLabel(`AIが制約や入力例を整えています…(${p.attempt}回目)`);
-        } else if (p.phase === "solving") {
-          setGenerateLabel("AIが模範解答を書いています…");
-        } else if (p.phase === "validating") {
-          setGenerateLabel("問題をチェックしています…");
+          setGenView((prev) => ({
+            phase: "loading-model",
+            modelPct: Math.round(p.detail.progress * 100),
+            attempt: prev?.attempt ?? 1,
+          }));
         } else {
-          setGenerateLabel("テストケースを作成しています…(Pythonの模範解答を実行中)");
+          setGenView({ phase: p.phase, modelPct: null, attempt: p.attempt });
         }
       });
 
@@ -122,7 +118,7 @@ export default function AppShell() {
       setGenerateError("問題生成に失敗しました。条件を変えてもう一度試してください。");
     } finally {
       setGenerating(false);
-      setGenerateLabel(null);
+      setGenView(null);
     }
   }, [language, difficulty, topic]);
 
@@ -239,7 +235,7 @@ export default function AppShell() {
           problem={problem}
           fromCache={fromCache}
           generating={generating}
-          generateLabel={generateLabel}
+          genView={genView}
           generateError={generateError}
           onLanguageChange={handleLanguageChange}
           onDifficultyChange={setDifficulty}
