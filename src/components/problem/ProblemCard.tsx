@@ -16,7 +16,7 @@ const DIFFICULTY_STYLE: Record<Difficulty, string> = {
 
 function Section({ title, icon: Icon, children }: { title: string; icon: IconType; children: React.ReactNode }) {
   return (
-    <div className="mt-4">
+    <div className="mt-3">
       <h4 className="mb-1 flex items-center gap-1.5 text-xs font-bold text-slate-500">
         <Icon className="h-3.5 w-3.5 text-slate-400" />
         {title}
@@ -51,7 +51,7 @@ function CopyButton({ text }: { text: string }) {
 
 function CodeBlock({ text }: { text: string }) {
   return (
-    <pre className="overflow-x-auto rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs leading-relaxed text-slate-700">
+    <pre className="overflow-x-auto rounded-lg bg-slate-50 px-3 py-1.5 font-mono text-xs leading-relaxed text-slate-700">
       {text || " "}
     </pre>
   );
@@ -59,7 +59,7 @@ function CodeBlock({ text }: { text: string }) {
 
 export default function ProblemCard({ problem, fromCache }: { problem: Problem; fromCache: boolean }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       {/* バッジ */}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-600">
@@ -78,7 +78,7 @@ export default function ProblemCard({ problem, fromCache }: { problem: Problem; 
 
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{problem.statement}</p>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <Section title="入力形式" icon={LuLogIn}>
           <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{problem.inputFormat}</p>
         </Section>
@@ -100,11 +100,11 @@ export default function ProblemCard({ problem, fromCache }: { problem: Problem; 
 
       {/* サンプル: 入力 → 出力 が対で分かるカード */}
       {problem.samples.map((sample, i) => (
-        <div key={i} className="mt-4 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5">
-          <div className="mb-1.5 flex items-center justify-between">
+        <div key={i} className="mt-3 rounded-xl border border-slate-200 bg-slate-50/50 p-2.5">
+          <div className="mb-1 flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500">サンプル {i + 1}</span>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div>
               <div className="mb-0.5 flex items-center justify-between">
                 <span className="text-[10px] font-medium text-slate-400">入力</span>

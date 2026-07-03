@@ -220,14 +220,14 @@ export default function AppShell() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-100">
-      <header className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 py-3">
+      <header className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 py-2">
         <h1 className="text-base font-bold text-slate-800">AIコード練習</h1>
         <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-500">
           ブラウザ内AI・実行環境(外部API不使用)
         </span>
       </header>
 
-      <main className="grid min-h-0 flex-1 grid-cols-[minmax(280px,22%)_1fr_minmax(200px,16%)] grid-rows-[minmax(0,1fr)] gap-4 p-4">
+      <main className="grid min-h-0 flex-1 grid-cols-[minmax(280px,22%)_1fr_minmax(200px,16%)] grid-rows-[minmax(0,1fr)] gap-3 p-3">
         <LeftPanel
           language={language}
           difficulty={difficulty}

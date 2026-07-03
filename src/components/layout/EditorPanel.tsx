@@ -25,9 +25,9 @@ export default function EditorPanel(props: Props) {
   const hasResults = props.judgeResult !== null || props.review !== null || props.reviewLoading;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
+    <div className="flex h-full min-h-0 flex-col gap-2">
       {/* 実行結果が出たらエディタを固定の高さに縮め、結果とレビューが常に見えるようにする */}
-      <div className={hasResults ? "min-h-[180px] shrink-0 basis-[44%]" : "min-h-0 flex-1"}>
+      <div className={hasResults ? "min-h-[140px] shrink-0 basis-[38%]" : "min-h-0 flex-1"}>
         <CodeEditor language={props.language} value={props.code} onChange={props.onCodeChange} />
       </div>
 
@@ -56,7 +56,7 @@ export default function EditorPanel(props: Props) {
       </div>
 
       {hasResults && (
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-2 lg:grid-cols-2">
           <div className="min-h-0 overflow-y-auto">
             {props.judgeResult && <RunResult result={props.judgeResult} />}
           </div>

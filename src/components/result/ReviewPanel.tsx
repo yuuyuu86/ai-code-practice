@@ -16,7 +16,7 @@ const ITEMS: Array<{
 
 export default function ReviewPanel({ review, loading }: { review: Review | null; loading: boolean }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-bold text-slate-700">レビュー</h3>
         {review &&
