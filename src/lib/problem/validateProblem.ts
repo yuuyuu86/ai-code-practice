@@ -55,11 +55,11 @@ export function validateProblemStructure(data: unknown): ValidationResult {
   for (const s of p.samples) {
     if (!testInputs.includes(s.input)) testInputs.unshift(s.input);
   }
-  if (testInputs.length < 4 || testInputs.length > 8) {
+  if (testInputs.length < 3 || testInputs.length > 8) {
     if (testInputs.length > 8) {
       testInputs.length = 8;
     } else {
-      return { ok: false, reason: `testInputsは4〜8個必要です(現在${testInputs.length}個)。inputFormatに従った入力を5個作ってください` };
+      return { ok: false, reason: `testInputsは3〜8個必要です(現在${testInputs.length}個)。inputFormatに従った入力を5個作ってください` };
     }
   }
   if (typeof p.referenceSolutions?.python !== "string" || p.referenceSolutions.python.trim() === "") {

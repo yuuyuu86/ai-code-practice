@@ -6,7 +6,7 @@ import { validateProblemStructure } from "@/lib/problem/validateProblem";
 import { buildTests } from "@/lib/problem/buildTests";
 import { cacheAIProblem, findCachedProblem, saveGeneratedProblem } from "@/lib/storage/problems";
 
-const MAX_ATTEMPTS = 3;
+const MAX_ATTEMPTS = 5;
 
 export type GenerateProgress =
   | { phase: "loading-model"; detail: LoadProgress }
@@ -157,7 +157,7 @@ function checkSpec(spec: ProblemSpec): { ok: true } | { ok: false; reason: strin
   if (!spec.statement.trim()) return { ok: false, reason: "問題文が読み取れませんでした。[STATEMENT]見出しを使ってください" };
   if (!spec.inputFormat.trim()) return { ok: false, reason: "入力形式が読み取れませんでした。[INPUT_FORMAT]見出しを使ってください" };
   if (!spec.outputFormat.trim()) return { ok: false, reason: "出力形式が読み取れませんでした。[OUTPUT_FORMAT]見出しを使ってください" };
-  if (spec.inputs.length < 4) {
+  if (spec.inputs.length < 3) {
     return { ok: false, reason: `入力例が${spec.inputs.length}個しかありません。[INPUTS]に ==== 区切りで5個書いてください` };
   }
   return { ok: true };
