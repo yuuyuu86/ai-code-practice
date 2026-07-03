@@ -37,7 +37,7 @@ export default function LeftPanel(props: Props) {
       {props.generating && props.genView && <GenerationProgress view={props.genView} />}
 
       {props.generateError && (
-        <div className="whitespace-pre-wrap rounded-2xl border border-orange-200 bg-orange-50 p-4 text-xs leading-relaxed text-orange-700">
+        <div className="whitespace-pre-wrap rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-700">
           {props.generateError}
         </div>
       )}
@@ -48,11 +48,7 @@ export default function LeftPanel(props: Props) {
         !props.generating &&
         !props.generateError && (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-6 text-center text-xs leading-relaxed text-slate-400">
-            「問題を生成」ボタンを押すと、
-            <br />
-            AIがあなたに合わせた問題を作ります。
-            <br />
-            <span className="mt-2 block text-[10px]">初回はAIモデルのダウンロードに数分かかることがあります。</span>
+            「問題を生成」を押すと問題が作られます。
           </div>
         )
       )}

@@ -1,12 +1,15 @@
 import type { JudgeStatus } from "@/types/judge";
 
+// 配色は AC(緑)と、それ以外(琥珀)の2トーンに統一する。
+// 状態の区別はラベル文字とアイコン(RunResult側)で行う。
+const NOT_AC_STYLE = "bg-amber-50 text-amber-700 border-amber-200";
 const STYLES: Record<JudgeStatus, string> = {
   AC: "bg-green-100 text-green-700 border-green-300",
-  WA: "bg-red-50 text-red-600 border-red-200",
-  CE: "bg-orange-50 text-orange-600 border-orange-200",
-  RE: "bg-amber-50 text-amber-700 border-amber-200",
-  TLE: "bg-purple-50 text-purple-600 border-purple-200",
-  OLE: "bg-slate-100 text-slate-600 border-slate-300",
+  WA: NOT_AC_STYLE,
+  CE: NOT_AC_STYLE,
+  RE: NOT_AC_STYLE,
+  TLE: NOT_AC_STYLE,
+  OLE: NOT_AC_STYLE,
 };
 
 export default function StatusBadge({ status, size = "md" }: { status: JudgeStatus; size?: "sm" | "md" }) {
