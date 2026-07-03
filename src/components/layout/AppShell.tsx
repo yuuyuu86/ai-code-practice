@@ -96,8 +96,10 @@ export default function AppShell() {
         if (p.phase === "loading-model") {
           const pct = Math.round(p.detail.progress * 100);
           setGenerateLabel(`AIモデルを読み込み中… ${pct}%(初回は数分かかります)`);
-        } else if (p.phase === "generating") {
-          setGenerateLabel(`AIが問題を考えています…(${p.attempt}回目)`);
+        } else if (p.phase === "drafting-outline") {
+          setGenerateLabel(`AIが問題の骨格を考えています…(${p.attempt}回目)`);
+        } else if (p.phase === "drafting-details") {
+          setGenerateLabel(`AIが制約や入力例を整えています…(${p.attempt}回目)`);
         } else if (p.phase === "solving") {
           setGenerateLabel("AIが模範解答を書いています…");
         } else if (p.phase === "validating") {

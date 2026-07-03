@@ -25,6 +25,32 @@ export function findForbiddenPattern(text: string): string | null {
   return null;
 }
 
+function countMatches(text: string, pattern: RegExp): number {
+  const matches = text.match(pattern);
+  return matches ? matches.length : 0;
+}
+
+/**
+ * 見出しやコードを除いた説明文が日本語として自然かをざっくり判定する。
+ * 英数字は制約式や変数名で必要なので完全禁止にはせず、
+ * 日本語がほぼ含まれないケースだけを再生成対象にする。
+ */
+export function findNonJapaneseReason(text: string): string | null {
+  const normalized = text.replace(/\[[A-Z_]+\]/g, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return "説明文が空です";
+
+  const jpCount = countMatches(normalized, /[ぁ-んァ-ヶ一-龠]/g);
+  const asciiWordCount = countMatches(normalized, /\b[A-Za-z]{4,}\b/g);
+
+  if (jpCount === 0) {
+    return "日本語の文章になっていません";
+  }
+  if (jpCount < 12 && asciiWordCount >= 4) {
+    return "英語の文章が多すぎます";
+  }
+  return null;
+}
+
 /**
  * Problem Validator(構造チェック)。
  * referenceSolutions.pythonの実行チェックとsamples照合はbuildTests側で行う。
@@ -75,6 +101,20 @@ export function validateProblemStructure(data: unknown): ValidationResult {
   }
   if (typeof p.referenceSolutions?.python !== "string" || p.referenceSolutions.python.trim() === "") {
     return { ok: false, reason: "referenceSolutions.pythonがありません" };
+  }
+
+  const japaneseFields = [
+    p.title,
+    p.statement,
+    p.inputFormat,
+    p.outputFormat,
+    ...(Array.isArray(p.constraints) ? p.constraints.map(String) : []),
+    ...(Array.isArray(p.hints) ? p.hints.map(String) : []),
+    typeof p.explanation === "string" ? p.explanation : "",
+  ].join("\n");
+  const nonJapanese = findNonJapaneseReason(japaneseFields);
+  if (nonJapanese) {
+    return { ok: false, reason: `${nonJapanese}。問題文や解説は日本語で書いてください` };
   }
 
   const combined = `${p.title}\n${p.statement}\n${p.inputFormat}\n${p.outputFormat}\n${p.referenceSolutions.python}`;

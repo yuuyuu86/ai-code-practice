@@ -1,7 +1,7 @@
 import type { GenerateProblemInput } from "@/types/problem";
 import type { Review } from "@/types/submission";
 import type { JudgeResult } from "@/types/judge";
-import type { ProblemSpec } from "@/lib/problem/schema";
+import type { ProblemOutline, ProblemSpec } from "@/lib/problem/schema";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   c: "C言語",
@@ -9,12 +9,65 @@ const LANGUAGE_NAMES: Record<string, string> = {
   javascript: "JavaScript",
 };
 
+const DIFFICULTY_REQUIREMENTS: Record<string, string[]> = {
+  入門: [
+    "1回の計算か、1つの簡単な判定だけで解ける内容にする。",
+    "入力の種類は1〜2個に抑え、長い手順は要求しない。",
+  ],
+  初級: [
+    "少なくとも3段階の処理で解ける内容にする。",
+    "if か for のどちらか一方を自然に使う問題にする。",
+    "入力を読んでそのまま1回計算して終わる問題にはしない。",
+    "少なくとも1つは中間結果を作ってから答えを出すようにする。",
+  ],
+  中級: [
+    "2つ以上の処理を組み合わせる問題にする。例: 繰り返し+条件分岐、配列+集計、関数+判定。",
+    "少なくとも4段階の手順が必要な問題にする。1回の式変形だけで終わらせない。",
+    "少なくとも1か所は、途中結果を整理しないと間違えやすい手順を入れる。",
+    "入力が複数個ある場合は、それぞれの値の関係を使って判断や集計を行うようにする。",
+    "単純な合計・平均・最大最小だけを出す問題にはしない。",
+    "条件分岐か繰り返しのどちらかは必須にし、できれば両方使う問題にする。",
+    "ただし特殊なアルゴリズムや高度なデータ構造は使わない。",
+  ],
+  上級: [
+    "基礎文法の組み合わせで解けるが、手順を自分で設計する必要がある問題にする。",
+    "少なくとも5段階の処理を含める。例: 入力の整形→走査→中間集計→追加判定→条件に応じた出力。",
+    "複数条件や複数要素の集計を扱い、1つ以上の見落としやすいケース分けを含める。",
+    "単純な最大値・最小値を出すだけ、合計を出すだけ、1回の if で終わる問題にはしない。",
+    "配列・繰り返し・条件分岐のうち少なくとも2種類を自然に使う問題にする。",
+    "少なくとも1回は、途中で作った値を使ってさらに別の判断や計算を行うようにする。",
+    "入力の複数要素をまとめて見ないと解けない問題にする。",
+    "ただし競技プログラミング寄りの難問や特殊なアルゴリズムにはしない。",
+  ],
+};
+
+const TOPIC_REQUIREMENTS: Record<string, string[]> = {
+  入出力: ["入力値をそのまま表示し直すだけではなく、少なくとも1回は加工してから出力する。"],
+  "変数・計算": ["四則演算や中間変数の使い分けが必要になるようにする。"],
+  条件分岐: ["条件は1つだけで終わらせず、else まで含めて分岐が必要な問題にする。"],
+  繰り返し: ["ループを1回以上使わないと解けない問題にする。"],
+  配列: ["複数要素を読み取り、少なくとも1回は配列全体を走査する必要がある問題にする。"],
+  関数: ["処理を関数に分けると自然に解ける問題にする。"],
+};
+
+function buildConstraintLines(input: GenerateProblemInput): string {
+  return [...(DIFFICULTY_REQUIREMENTS[input.difficulty] ?? []), ...(TOPIC_REQUIREMENTS[input.topic] ?? [])]
+    .map((line) => `- ${line}`)
+    .join("\n");
+}
+
+function buildReferenceSection(referenceExample?: string): string {
+  return referenceExample
+    ? `\n参考: 過去に検証を通過した良い問題の例です。構成や難易度感の参考にはしてよいですが、題材・数値・文章は流用せず、別の新しい問題を作ってください。\n${referenceExample}\n`
+    : "";
+}
+
 /**
- * 【2段階生成 / 第1段階】問題仕様(コードなし)のプロンプト。
- * 小さいモデルは「1回で全部」だと崩れるので、まず問題文と入力例だけを作らせる。
+ * 【3段階生成 / 第1段階】問題の骨格だけを作るプロンプト。
+ * 小さいモデルは「1回で全部」だと崩れるので、まずタイトル・問題文・入出力形式だけを作らせる。
  * コードは含めない(コード例を出すとそれをエコーして本文を書かない挙動を誘発するため)。
  */
-export function buildSpecPrompt(input: GenerateProblemInput, failureReason?: string): {
+export function buildSpecPrompt(input: GenerateProblemInput, failureReason?: string, referenceExample?: string): {
   system: string;
   user: string;
 } {
@@ -25,9 +78,20 @@ export function buildSpecPrompt(input: GenerateProblemInput, failureReason?: str
   const sourceSection = input.sourceContext
     ? `\n参考(この内容・概念に沿ったオリジナル問題にする。文章はコピーしない):\n${input.sourceContext}\n`
     : "";
+  const referenceSection = buildReferenceSection(referenceExample);
   const failureSection = failureReason ? `\n前回はこの理由で不合格でした。直してください: ${failureReason}\n` : "";
+  const extraConstraints = buildConstraintLines(input);
 
-  const user = `下の完成例と同じ見出し(英語のブラケット見出し)を使い、中身だけを新しい問題に変えてください。見出しの名前は変えないこと。全ての見出しを上から順に必ず書くこと。コードは書かないこと。
+  const user = `下の完成例と同じ見出し(英語のブラケット見出し)を使い、中身だけを新しい問題に変えてください。今回は [TITLE] [STATEMENT] [INPUT_FORMAT] [OUTPUT_FORMAT] [END] だけを書きます。コードは書かないこと。
+
+重要:
+- [TITLE] [STATEMENT] [INPUT_FORMAT] [OUTPUT_FORMAT] の中身は、必ず自然な日本語で書く。
+- 見出し名そのもの([TITLE]など)以外は英語で書かない。
+- 難易度に合わない簡単すぎる問題にしない。
+- [CONSTRAINTS] [INPUTS] [HINTS] [EXPLANATION] はまだ書かない。
+- 必ず [TITLE] から始めて、最後は [END] で終える。
+- 5つの見出し以外は1文字も書かない。説明や注意書きの追記は禁止。
+- 空欄は禁止。各見出しの直後に必ず1行以上の日本語を書く。
 
 ===完成例===
 [TITLE]
@@ -38,34 +102,85 @@ export function buildSpecPrompt(input: GenerateProblemInput, failureReason?: str
 1行に整数 A と B が半角スペース区切りで与えられる。
 [OUTPUT_FORMAT]
 A + B の値を1行で出力する。
+[END]
+===完成例ここまで===
+
+出力テンプレート(この形をそのまま使い、中身だけ変える):
+[TITLE]
+ここに日本語のタイトル
+[STATEMENT]
+ここに日本語の問題文
+[INPUT_FORMAT]
+ここに日本語の入力形式
+[OUTPUT_FORMAT]
+ここに日本語の出力形式
+[END]
+
+上とまったく同じ5つの見出しだけで、次の条件の新しい問題を1問だけ作ってください。
+- 難易度: ${input.difficulty}
+- 単元: ${input.topic}(${langName}の初心者向け)
+- 標準入力から読み、標準出力に書くだけで解ける、出力が一意に決まる問題にする。
+- 乱数・時刻・ファイル・ネットワークは使わない。「乱数」「ランダム」という言葉も問題文に書かない。値は int の範囲。
+${extraConstraints}${referenceSection}${sourceSection}${failureSection}`;
+
+  return { system, user };
+}
+
+/**
+ * 【3段階生成 / 第2段階】骨格に対して制約・入力例・ヒント・解説を補う。
+ */
+export function buildDetailsPrompt(
+  input: GenerateProblemInput,
+  outline: ProblemOutline,
+  failureReason?: string,
+  referenceExample?: string,
+): { system: string; user: string } {
+  const referenceSection = buildReferenceSection(referenceExample);
+  const failureSection = failureReason ? `\n前回はこの理由で不合格でした。直してください: ${failureReason}\n` : "";
+  const extraConstraints = buildConstraintLines(input);
+  const system = `あなたは初心者向けプログラミング教材の作成者です。与えられた問題の骨格に対して、不足している制約・入力例・ヒント・解説だけを日本語で補います。コードは書きません。前置き・あいさつは書きません。`;
+
+  const user = `次の問題の骨格をもとに、[CONSTRAINTS] [INPUTS] [HINTS] [EXPLANATION] だけを書いてください。見出しはこの英語のまま必ず使い、最後に [END] を書いてください。
+
+重要:
+- 見出し名以外は必ず自然な日本語で書く。
+- [CONSTRAINTS] は最低2行以上書く。
+- [INPUTS] は ==== の行で区切って5個書く。
+- ==== の区切り行は4回必要です。5個の入力を、1個ずつ区切ってください。
+- 5個とも [INPUT_FORMAT] に従う有効な入力にする。
+- 1つの極端なケースだけに偏らず、普通のケース・境界に近いケースを混ぜる。
+- 問題の骨格は変えない。足りない部分だけ補う。
+
+[CONSTRAINTS] の書き方の例:
 [CONSTRAINTS]
-- 0 <= A <= 100
-- 0 <= B <= 100
+- 入力される値はすべて int の範囲に収まる。
+- 問題文に書かれていない特別な外部入力はない。
+
+[INPUTS] の書き方の例:
 [INPUTS]
 3 5
 ====
 0 0
 ====
-100 100
-====
 10 20
 ====
 1 99
-[HINTS]
-- 入力を2つの数に分けて考えます。
-- input().split() と int() を使います。
-- 2つの数を足して print します。
-[EXPLANATION]
-2つの数を整数に変換して足すだけの問題です。
-[END]
-===完成例ここまで===
+====
+100 100
 
-上とまったく同じ見出しで、次の条件の新しい問題を1問だけ作ってください。
+[TITLE]
+${outline.title}
+[STATEMENT]
+${outline.statement}
+[INPUT_FORMAT]
+${outline.inputFormat}
+[OUTPUT_FORMAT]
+${outline.outputFormat}
+
+追加条件:
 - 難易度: ${input.difficulty}
-- 単元: ${input.topic}(${langName}の初心者向け)
-- 標準入力から読み、標準出力に書くだけで解ける、出力が一意に決まる問題にする。
-- 乱数・時刻・ファイル・ネットワークは使わない。「乱数」「ランダム」という言葉も問題文に書かない(入力は [INPUTS] に固定の値として与える)。値は int の範囲。
-- [INPUTS] は ==== の行で区切って5個。すべて [INPUT_FORMAT] に従う有効な入力にする。${sourceSection}${failureSection}`;
+- 単元: ${input.topic}
+${extraConstraints}${referenceSection}${failureSection}`;
 
   return { system, user };
 }
@@ -74,10 +189,11 @@ A + B の値を1行で出力する。
  * 【2段階生成 / 第2段階】Python模範解答のプロンプト。
  * 問題文と入力形式を渡して、コードだけを書かせる(小さいモデルが最も得意なタスク)。
  */
-export function buildSolutionPrompt(spec: ProblemSpec): { system: string; user: string } {
+export function buildSolutionPrompt(spec: ProblemSpec, failureReason?: string): { system: string; user: string } {
   const system = `あなたは正確なPythonプログラマです。与えられた問題を解くPython3プログラムだけを出力します。説明文は書かず、コードだけを出力します。`;
+  const failureSection = failureReason ? `\n前回はこの理由で不合格でした。直してください: ${failureReason}\n` : "";
 
-  const user = `次の問題を解くPython3プログラムを書いてください。標準入力(input())から読み、答えを print で出力します。コードだけを出力してください。
+  const user = `次の問題を解くPython3プログラムを書いてください。標準入力(input())から読み、答えを print で出力します。コードだけを出力してください。コメントや説明文は書かないでください。
 
 # 問題
 ${spec.statement}
@@ -91,7 +207,8 @@ ${spec.outputFormat}
 # 入力の例
 ${spec.inputs[0] ?? ""}
 
-必ず動作する完全なコードを書いてください。`;
+必ず動作する完全なコードを書いてください。
+問題文が日本語でも、出力するのはPythonコードだけです。${failureSection}`;
 
   return { system, user };
 }
@@ -116,6 +233,7 @@ export function buildProblemPrompt(input: GenerateProblemInput, failureReason?: 
   const failureSection = failureReason
     ? `\n\n前回の生成は次の理由で不合格でした。同じ失敗をしないでください:\n${failureReason}`
     : "";
+  const extraConstraints = buildConstraintLines(input);
 
   const user = `下は出力フォーマットの「完成例」です。この例とまったく同じ見出し([TITLE] や [PYTHON] など、英語のブラケット見出し)を使い、中身だけを新しい問題に差し替えて出力してください。
 
@@ -124,6 +242,9 @@ export function buildProblemPrompt(input: GenerateProblemInput, failureReason?: 
 - 11個の見出しをすべて省略せず、上から順に書く。
 - 見出しの次の行から中身を書く。中身は日本語(コードはPython)。
 - JSONにはしない。余計な前置きやコードフェンス(\`\`\`)は書かない。
+- [TITLE] [STATEMENT] [INPUT_FORMAT] [OUTPUT_FORMAT] [CONSTRAINTS] [SAMPLE_OUTPUT] [HINTS] [EXPLANATION] は必ず自然な日本語で書く。
+- 見出し名以外を英語だけの文にしない。
+- 難易度に合わない簡単すぎる問題にしない。
 
 ===完成例ここから===
 [TITLE]
@@ -171,7 +292,8 @@ input().split() で2つの文字列に分け、int() で整数に変換して足
 - 出力が一意に決まる問題にする(乱数・現在時刻・順不同の出力は禁止)
 - ファイル操作・ネットワーク・OS依存の処理は禁止。値は int の範囲内。
 - [TEST_INPUTS] は ==== の行で区切って5個。1個目は [SAMPLE_INPUT] と同じにする。
-- [PYTHON] は必ず動くコードにする。期待出力は書かない。${sourceSection}${failureSection}`;
+- [PYTHON] は必ず動くコードにする。期待出力は書かない。
+${extraConstraints}${sourceSection}${failureSection}`;
 
   return { system, user };
 }

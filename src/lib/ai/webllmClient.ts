@@ -7,17 +7,18 @@ import type { MLCEngine, InitProgressReport } from "@mlc-ai/web-llm";
  * 【model_id 確認メモ】
  * @mlc-ai/web-llm v0.2.84 の prebuiltAppConfig.model_list を確認済み。
  * 以下のmodel_idが利用可能(node_modules内のconfigで確認):
- *   - "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"  ← 第一候補(日本語の指示追従・コード生成が安定)
+ *   - "Qwen2.5-3B-Instruct-q4f16_1-MLC"  ← 第一候補(難易度高めでも構造維持しやすい)
+ *   - "Qwen2.5-1.5B-Instruct-q4f16_1-MLC" ← 予備(3Bより軽い)
  *   - "Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC" ← コード重視の代替
  *   - "Llama-3.2-1B-Instruct-q4f16_1-MLC"  ← より軽いが指示追従が弱く、構造化出力を崩しやすい
  *   - "gemma3-1b-it-q4f16_1-MLC"
  *
  * 【モデル選定の経緯】当初 Llama-3.2-1B を第一候補にしたが、
  * セクション形式(見出し付き問題+Python模範解答)の生成で見出しの取り違えや
- * 必須セクションの欠落が頻発したため、指示追従の強い Qwen2.5-1.5B に変更した。
+ * 必須セクションの欠落が頻発したため、より強い Qwen2.5 系を優先して使う。
  */
-export const PRIMARY_MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
-export const FALLBACK_MODEL_ID = "Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC";
+export const PRIMARY_MODEL_ID = "Qwen2.5-3B-Instruct-q4f16_1-MLC";
+export const FALLBACK_MODEL_ID = "Qwen2.5-1.5B-Instruct-q4f16_1-MLC";
 
 export type LoadProgress = {
   text: string;

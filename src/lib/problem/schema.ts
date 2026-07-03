@@ -12,6 +12,20 @@ export type RawGeneratedProblem = {
   explanation: string;
 };
 
+export type ProblemOutline = {
+  title: string;
+  statement: string;
+  inputFormat: string;
+  outputFormat: string;
+};
+
+export type ProblemDetails = {
+  constraints: string[];
+  inputs: string[];
+  hints: string[];
+  explanation: string;
+};
+
 /**
  * LLMの出力からJSON部分を取り出してパースする。
  * コードフェンスや前後の説明文が混ざるケースに耐える。
@@ -148,10 +162,26 @@ export function sectionToList(raw: string | undefined): string[] {
 
 /** 複数の入力を区切り(====, ----, 「テスト2」見出し等)で分割 */
 export function splitInputBlocks(raw: string | undefined): string[] {
-  return (raw || "")
+  const normalized = (raw || "").trim();
+  if (!normalized) return [];
+
+  const separated = normalized
     .split(/^\s*(?:[=~#-]{3,}|(?:テスト|ケース|入力|test|case|input)\s*\d+.*)\s*$/im)
     .map((t) => t.replace(/^\n+|\n+$/g, ""))
     .filter((t) => t.trim().length > 0);
+  if (separated.length > 1) return separated;
+
+  // モデルが ==== を忘れて、1行入力を単純に改行列挙することがある。
+  // その場合は各行を別ケースとして扱って救済する。
+  const lines = normalized
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length >= 3 && lines.every((line) => !/\s{2,}/.test(line))) {
+    return lines;
+  }
+
+  return separated;
 }
 
 /** ```python ... ``` フェンスや前後の地の文を取り除いてコード本体を得る */
@@ -197,6 +227,44 @@ export type ProblemSpec = {
   hints: string[];
   explanation: string;
 };
+
+/** 3段階生成の第1段階: 問題の骨格だけをパースする */
+export function parseProblemOutline(text: string): ProblemOutline {
+  const s = parseSections(text);
+  if (s.TITLE || s.STATEMENT || s.INPUT_FORMAT || s.OUTPUT_FORMAT) {
+    return {
+      title: s.TITLE ?? "",
+      statement: s.STATEMENT ?? "",
+      inputFormat: s.INPUT_FORMAT ?? "",
+      outputFormat: s.OUTPUT_FORMAT ?? "",
+    };
+  }
+
+  // 弱い出力への保険: 見出しがなくても、先頭数行を骨格として救済する。
+  const lines = text
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && line !== "[END]");
+  return {
+    title: lines[0] ?? "",
+    statement: lines[1] ?? "",
+    inputFormat: lines[2] ?? "",
+    outputFormat: lines[3] ?? "",
+  };
+}
+
+/** 3段階生成の第2段階: 制約・入力例・ヒント・解説だけをパースする */
+export function parseProblemDetails(text: string): ProblemDetails {
+  const s = parseSections(text);
+  const inputRaw = s.INPUTS ?? s.TEST_INPUTS ?? s.SAMPLE_INPUT ?? "";
+  return {
+    constraints: sectionToList(s.CONSTRAINTS),
+    inputs: splitInputBlocks(inputRaw),
+    hints: sectionToList(s.HINTS),
+    explanation: s.EXPLANATION ?? "",
+  };
+}
 
 /** 2段階生成の第1段階: 問題仕様(コードなし)をパースする */
 export function parseProblemSpec(text: string): ProblemSpec {
