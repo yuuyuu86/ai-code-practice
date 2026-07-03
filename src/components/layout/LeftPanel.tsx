@@ -22,7 +22,7 @@ type Props = {
 
 export default function LeftPanel(props: Props) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pr-1">
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto pr-1">
       <ProblemControls
         language={props.language}
         difficulty={props.difficulty}

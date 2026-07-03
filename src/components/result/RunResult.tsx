@@ -30,7 +30,7 @@ function Field({ title, icon: Icon, tone, text }: { title: string; icon: IconTyp
         <Icon className="h-3 w-3" />
         {title}
       </h4>
-      <pre className="max-h-32 overflow-auto rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs leading-relaxed text-slate-700">
+      <pre className="max-h-28 overflow-auto rounded-lg bg-slate-50 px-3 py-1.5 font-mono text-xs leading-relaxed text-slate-700">
         {text || "(出力なし)"}
       </pre>
     </div>
@@ -43,7 +43,7 @@ export default function RunResult({ result }: { result: JudgeResult }) {
   const ratio = result.totalCount > 0 ? Math.round((result.passedCount / result.totalCount) * 100) : 0;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <h3 className="text-sm font-bold text-slate-700">実行結果</h3>
 
       {/* 結果バナー */}

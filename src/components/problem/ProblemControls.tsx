@@ -19,8 +19,8 @@ const selectClass =
 
 export default function ProblemControls(props: Props) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="grid grid-cols-1 gap-3">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="grid grid-cols-1 gap-2.5">
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-slate-500">言語</span>
           <select
