@@ -16,3 +16,13 @@ export async function getSubmission(id: string): Promise<Submission | undefined>
   const db = await getDB();
   return db.get("submissions", id);
 }
+
+export async function deleteSubmission(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete("submissions", id);
+}
+
+export async function clearSubmissions(): Promise<void> {
+  const db = await getDB();
+  await db.clear("submissions");
+}
