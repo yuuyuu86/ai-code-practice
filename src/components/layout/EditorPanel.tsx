@@ -59,7 +59,7 @@ export default function EditorPanel(props: Props) {
       <div className="flex shrink-0 items-center gap-3">
         <button
           onClick={props.onRun}
-          disabled={props.running || !props.canRun}
+          disabled={props.running || !props.canRun || answerOpen}
           className="flex items-center gap-1.5 rounded-xl bg-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           {props.running ? (
@@ -71,6 +71,9 @@ export default function EditorPanel(props: Props) {
         </button>
         {!props.canRun && !props.running && (
           <span className="text-xs text-slate-400">まず問題を生成してください</span>
+        )}
+        {answerOpen && !props.running && (
+          <span className="text-xs text-slate-400">答えを見たため実行できません(別の問題か言語に切り替えてください)</span>
         )}
         {props.running && props.runLabel && (
           <span className="flex items-center gap-2 text-xs text-slate-500">
