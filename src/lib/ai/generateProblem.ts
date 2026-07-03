@@ -2,7 +2,7 @@ import type { GenerateProblemInput, Problem } from "@/types/problem";
 import { chat, isWebGPUAvailable, type LoadProgress } from "./webllmClient";
 import { buildSpecPrompt, buildSolutionPrompt } from "./prompts";
 import { parseProblemSpec, extractCode, type ProblemSpec } from "@/lib/problem/schema";
-import { validateProblemStructure } from "@/lib/problem/validateProblem";
+import { findForbiddenPattern, validateProblemStructure } from "@/lib/problem/validateProblem";
 import { buildTests } from "@/lib/problem/buildTests";
 import { cacheAIProblem, findCachedProblem, saveGeneratedProblem } from "@/lib/storage/problems";
 
@@ -159,6 +159,14 @@ function checkSpec(spec: ProblemSpec): { ok: true } | { ok: false; reason: strin
   if (!spec.outputFormat.trim()) return { ok: false, reason: "出力形式が読み取れませんでした。[OUTPUT_FORMAT]見出しを使ってください" };
   if (spec.inputs.length < 3) {
     return { ok: false, reason: `入力例が${spec.inputs.length}個しかありません。[INPUTS]に ==== 区切りで5個書いてください` };
+  }
+  // 禁止パターン(乱数・時刻など)は問題文の時点で分かるので、
+  // 高価な模範解答生成に進む前にここで弾いてリトライに回す
+  const forbidden = findForbiddenPattern(
+    `${spec.title}\n${spec.statement}\n${spec.inputFormat}\n${spec.outputFormat}`,
+  );
+  if (forbidden) {
+    return { ok: false, reason: `${forbidden}を含む問題は作れません。標準入出力だけで解ける問題にしてください` };
   }
   return { ok: true };
 }

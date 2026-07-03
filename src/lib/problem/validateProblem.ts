@@ -15,6 +15,17 @@ const FORBIDDEN_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
 ];
 
 /**
+ * 禁止パターンに一致したらそのラベルを返す。
+ * 仕様生成直後(generateProblemのcheckSpec)にも呼び、模範解答の生成前に弾けるようにする。
+ */
+export function findForbiddenPattern(text: string): string | null {
+  for (const { pattern, label } of FORBIDDEN_PATTERNS) {
+    if (pattern.test(text)) return label;
+  }
+  return null;
+}
+
+/**
  * Problem Validator(構造チェック)。
  * referenceSolutions.pythonの実行チェックとsamples照合はbuildTests側で行う。
  */
@@ -67,10 +78,9 @@ export function validateProblemStructure(data: unknown): ValidationResult {
   }
 
   const combined = `${p.title}\n${p.statement}\n${p.inputFormat}\n${p.outputFormat}\n${p.referenceSolutions.python}`;
-  for (const { pattern, label } of FORBIDDEN_PATTERNS) {
-    if (pattern.test(combined)) {
-      return { ok: false, reason: `${label}を含む問題は作れません。標準入出力だけで解ける問題にしてください` };
-    }
+  const forbidden = findForbiddenPattern(combined);
+  if (forbidden) {
+    return { ok: false, reason: `${forbidden}を含む問題は作れません。標準入出力だけで解ける問題にしてください` };
   }
 
   return {
