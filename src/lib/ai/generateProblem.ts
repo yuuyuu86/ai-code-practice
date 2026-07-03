@@ -67,6 +67,10 @@ export async function generateProblem(
         );
 
         const parsedOutline = parseProblemOutline(outlineResponse);
+        // 小型モデルは指示してもタイトルに"Advanced Level:"等のラベルを付けがちで、
+        // 拒否してリトライさせるだけでは同じ失敗を繰り返し試行回数を無駄にする。
+        // ここで自動的に取り除き、拒否は取り切れなかった場合の保険として残す。
+        parsedOutline.title = sanitizeTitleLabel(parsedOutline.title);
         const outlineCheck = checkOutline(parsedOutline, input.difficulty);
         if (outlineCheck.ok) {
           outline = parsedOutline;
@@ -199,6 +203,22 @@ export async function generateProblem(
       "問題生成に失敗しました。条件を変えてもう一度試してください。" +
       (failureReason ? `\n\n(最後の失敗理由: ${failureReason})` : ""),
   };
+}
+
+/**
+ * タイトル先頭の英語ラベル/レベル表記("Advanced Level: " "Step 3 - " 等)を取り除く。
+ * 区切り記号(: ： - —)の直前までを1個のラベルとみなし、複数付いていれば繰り返し剥がす。
+ */
+function sanitizeTitleLabel(title: string): string {
+  const labelPrefix =
+    /^(advanced|beginner|intermediate|expert|basic|easy|hard|medium|level|problem|question|task|step)\b[\s\p{L}\p{N}]{0,12}?[:：\-—]\s*/iu;
+  let t = title.trim();
+  for (let i = 0; i < 3; i++) {
+    const next = t.replace(labelPrefix, "").trim();
+    if (next === t) break;
+    t = next;
+  }
+  return t;
 }
 
 /** タイトルに "Advanced" "Level" などの英語ラベル/レベル表記が付いていないか */
