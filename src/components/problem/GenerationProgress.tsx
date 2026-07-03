@@ -1,6 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { IconType } from "react-icons";
+import {
+  LuBox,
+  LuPencil,
+  LuPuzzle,
+  LuBrain,
+  LuSearch,
+  LuFlaskConical,
+  LuCheck,
+  LuBot,
+  LuLightbulb,
+} from "react-icons/lu";
 
 /** 生成パイプラインの進捗を表す構造化ビュー */
 export type GenerationView = {
@@ -18,16 +30,16 @@ export type GenerationView = {
   attempt: number;
 };
 
-type Step = { key: GenerationView["phase"]; label: string; emoji: string };
+type Step = { key: GenerationView["phase"]; label: string; icon: IconType };
 
 // 表示順のパイプライン。preparing は最初のステップ(モデル準備)を先取りで光らせる。
 const STEPS: Step[] = [
-  { key: "loading-model", label: "AIモデルの準備", emoji: "📦" },
-  { key: "drafting-outline", label: "問題の骨格づくり", emoji: "✏️" },
-  { key: "drafting-details", label: "制約と入力例づくり", emoji: "🧩" },
-  { key: "solving", label: "模範解答づくり", emoji: "🧠" },
-  { key: "validating", label: "問題のチェック", emoji: "🔍" },
-  { key: "building-tests", label: "テストづくり", emoji: "🧪" },
+  { key: "loading-model", label: "AIモデルの準備", icon: LuBox },
+  { key: "drafting-outline", label: "問題の骨格づくり", icon: LuPencil },
+  { key: "drafting-details", label: "制約と入力例づくり", icon: LuPuzzle },
+  { key: "solving", label: "模範解答づくり", icon: LuBrain },
+  { key: "validating", label: "問題のチェック", icon: LuSearch },
+  { key: "building-tests", label: "テストづくり", icon: LuFlaskConical },
 ];
 
 function currentIndex(phase: GenerationView["phase"]): number {
@@ -62,8 +74,11 @@ export default function GenerationProgress({ view }: { view: GenerationView }) {
     <div className="overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white shadow-sm">
       {/* ヘッダー */}
       <div className="flex items-center gap-2.5 border-b border-blue-100 px-4 py-3">
-        <span className="text-xl" aria-hidden>
-          <span className="inline-block animate-bounce">🤖</span>
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white"
+          aria-hidden
+        >
+          <LuBot className="h-4 w-4 animate-bounce" />
         </span>
         <div className="min-w-0">
           <p className="text-sm font-bold text-slate-700">
@@ -75,9 +90,7 @@ export default function GenerationProgress({ view }: { view: GenerationView }) {
             </span>
           </p>
           {view.attempt > 1 && (
-            <p className="text-[11px] font-medium text-blue-500">
-              うまくいくまで挑戦中… {view.attempt}回目 💪
-            </p>
+            <p className="text-[11px] font-medium text-blue-500">うまくいくまで挑戦中… {view.attempt}回目</p>
           )}
         </div>
       </div>
@@ -87,6 +100,7 @@ export default function GenerationProgress({ view }: { view: GenerationView }) {
         {STEPS.map((step, i) => {
           const done = i < active;
           const isActive = i === active;
+          const Icon = step.icon;
           return (
             <li
               key={step.key}
@@ -95,7 +109,7 @@ export default function GenerationProgress({ view }: { view: GenerationView }) {
               }`}
             >
               <span
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
                   done
                     ? "bg-green-100 text-green-600"
                     : isActive
@@ -104,7 +118,11 @@ export default function GenerationProgress({ view }: { view: GenerationView }) {
                 }`}
                 aria-hidden
               >
-                {done ? "✓" : isActive ? <span className="animate-pulse">{step.emoji}</span> : step.emoji}
+                {done ? (
+                  <LuCheck className="h-3.5 w-3.5" />
+                ) : (
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? "animate-pulse" : ""}`} />
+                )}
               </span>
               <div className="min-w-0 flex-1">
                 <span
@@ -136,9 +154,12 @@ export default function GenerationProgress({ view }: { view: GenerationView }) {
 
       {/* 豆知識ローテーション */}
       <div className="border-t border-blue-100 bg-white/70 px-4 py-2.5">
-        <p className="text-[10px] font-bold text-slate-400">豆知識</p>
+        <p className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+          <LuLightbulb className="h-3 w-3" />
+          豆知識
+        </p>
         <p key={tip} className="mt-0.5 animate-[genfade_0.5s_ease] text-xs leading-relaxed text-slate-600">
-          💡 {TIPS[tip]}
+          {TIPS[tip]}
         </p>
       </div>
     </div>
