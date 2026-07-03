@@ -1,10 +1,17 @@
+import type { IconType } from "react-icons";
+import { LuClipboardCheck, LuCircleHelp, LuCompass, LuFootprints } from "react-icons/lu";
 import type { Review } from "@/types/submission";
 
-const ITEMS: Array<{ key: keyof Pick<Review, "result" | "cause" | "direction" | "nextStep">; label: string }> = [
-  { key: "result", label: "結果" },
-  { key: "cause", label: "原因" },
-  { key: "direction", label: "直す方向" },
-  { key: "nextStep", label: "次の一手" },
+const ITEMS: Array<{
+  key: keyof Pick<Review, "result" | "cause" | "direction" | "nextStep">;
+  label: string;
+  icon: IconType;
+  tone: string;
+}> = [
+  { key: "result", label: "結果", icon: LuClipboardCheck, tone: "text-slate-500" },
+  { key: "cause", label: "原因", icon: LuCircleHelp, tone: "text-amber-500" },
+  { key: "direction", label: "直す方向", icon: LuCompass, tone: "text-blue-500" },
+  { key: "nextStep", label: "次の一手", icon: LuFootprints, tone: "text-green-500" },
 ];
 
 export default function ReviewPanel({ review, loading }: { review: Review | null; loading: boolean }) {
@@ -30,11 +37,14 @@ export default function ReviewPanel({ review, loading }: { review: Review | null
       {!loading && !review && <p className="mt-3 text-xs text-slate-400">実行するとここにレビューが表示されます。</p>}
 
       {review && (
-        <dl className="mt-3 space-y-3">
-          {ITEMS.map(({ key, label }) => (
-            <div key={key}>
-              <dt className="text-xs font-bold text-slate-500">{label}</dt>
-              <dd className="mt-0.5 whitespace-pre-wrap text-xs leading-relaxed text-slate-700">{review[key]}</dd>
+        <dl className="mt-3 space-y-2.5">
+          {ITEMS.map(({ key, label, icon: Icon, tone }) => (
+            <div key={key} className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5">
+              <dt className={`flex items-center gap-1.5 text-xs font-bold ${tone}`}>
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </dt>
+              <dd className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-700">{review[key]}</dd>
             </div>
           ))}
         </dl>

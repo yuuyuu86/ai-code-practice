@@ -1,5 +1,6 @@
 "use client";
 
+import { LuPlay } from "react-icons/lu";
 import type { Language } from "@/types/problem";
 import type { JudgeResult } from "@/types/judge";
 import type { Review } from "@/types/submission";
@@ -34,9 +35,14 @@ export default function EditorPanel(props: Props) {
         <button
           onClick={props.onRun}
           disabled={props.running || !props.canRun}
-          className="rounded-xl bg-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
+          className="flex items-center gap-1.5 rounded-xl bg-blue-500 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
-          {props.running ? "実行中…" : "▶ 実行"}
+          {props.running ? (
+            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+          ) : (
+            <LuPlay className="h-3.5 w-3.5" />
+          )}
+          {props.running ? "実行中…" : "実行"}
         </button>
         {!props.canRun && !props.running && (
           <span className="text-xs text-slate-400">まず問題を生成してください</span>
