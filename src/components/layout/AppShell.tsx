@@ -10,7 +10,7 @@ import { judge } from "@/lib/judge/judge";
 import { getLanguageConfig } from "@/lib/languages";
 import { getDraft, saveDraft } from "@/lib/storage/drafts";
 import { getGeneratedProblem } from "@/lib/storage/problems";
-import { listSubmissions, saveSubmission } from "@/lib/storage/submissions";
+import { clearSubmissions, deleteSubmission, listSubmissions, saveSubmission } from "@/lib/storage/submissions";
 import { getSetting, setSetting } from "@/lib/storage/settings";
 import LeftPanel from "./LeftPanel";
 import EditorPanel from "./EditorPanel";
@@ -184,6 +184,30 @@ export default function AppShell() {
     }
   }, [problem, language, code, running]);
 
+  // 履歴の個別削除。選択中のものを消したら結果表示もクリアする。
+  const handleDeleteSubmission = useCallback(
+    async (s: Submission) => {
+      await deleteSubmission(s.id);
+      setSubmissions((prev) => prev.filter((x) => x.id !== s.id));
+      if (selectedSubmissionId === s.id) {
+        setSelectedSubmissionId(null);
+        setJudgeResult(null);
+        setReview(null);
+      }
+    },
+    [selectedSubmissionId],
+  );
+
+  // 履歴の全削除
+  const handleClearSubmissions = useCallback(async () => {
+    if (!window.confirm("実行履歴をすべて削除します。よろしいですか?")) return;
+    await clearSubmissions();
+    setSubmissions([]);
+    setSelectedSubmissionId(null);
+    setJudgeResult(null);
+    setReview(null);
+  }, []);
+
   // 履歴クリックで過去のコード・結果・レビューを復元
   const handleSelectSubmission = useCallback(async (s: Submission) => {
     setSelectedSubmissionId(s.id);
@@ -236,7 +260,13 @@ export default function AppShell() {
           onRun={handleRun}
         />
 
-        <HistorySidebar submissions={submissions} selectedId={selectedSubmissionId} onSelect={handleSelectSubmission} />
+        <HistorySidebar
+          submissions={submissions}
+          selectedId={selectedSubmissionId}
+          onSelect={handleSelectSubmission}
+          onDelete={handleDeleteSubmission}
+          onClear={handleClearSubmissions}
+        />
       </main>
     </div>
   );
