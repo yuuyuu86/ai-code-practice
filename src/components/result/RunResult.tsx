@@ -1,35 +1,23 @@
 import type { IconType } from "react-icons";
-import {
-  LuCircleCheck,
-  LuCircleX,
-  LuCircleAlert,
-  LuTriangleAlert,
-  LuClock,
-  LuAlignJustify,
-  LuLogIn,
-  LuTarget,
-  LuUser,
-} from "react-icons/lu";
+import { LuCircleCheck, LuCircleX, LuCircleAlert, LuTriangleAlert, LuClock, LuAlignJustify } from "react-icons/lu";
 import type { JudgeResult, JudgeStatus } from "@/types/judge";
 import { STATUS_DESCRIPTIONS, STATUS_LABELS } from "@/lib/judge/status";
 
-// ステータスごとの見た目(アイコン・バナー配色・進捗バー色)。
+// 配色は AC(緑)と、それ以外(琥珀)の2トーンに統一する。区別はアイコンとラベルで行う。
+const NOT_AC_META = { banner: "bg-amber-50 border-amber-200", iconColor: "text-amber-500", bar: "bg-amber-400" };
 const STATUS_META: Record<JudgeStatus, { icon: IconType; banner: string; iconColor: string; bar: string }> = {
   AC: { icon: LuCircleCheck, banner: "bg-green-50 border-green-200", iconColor: "text-green-500", bar: "bg-green-500" },
-  WA: { icon: LuCircleX, banner: "bg-red-50 border-red-200", iconColor: "text-red-500", bar: "bg-red-400" },
-  CE: { icon: LuCircleAlert, banner: "bg-orange-50 border-orange-200", iconColor: "text-orange-500", bar: "bg-orange-400" },
-  RE: { icon: LuTriangleAlert, banner: "bg-amber-50 border-amber-200", iconColor: "text-amber-500", bar: "bg-amber-400" },
-  TLE: { icon: LuClock, banner: "bg-purple-50 border-purple-200", iconColor: "text-purple-500", bar: "bg-purple-400" },
-  OLE: { icon: LuAlignJustify, banner: "bg-slate-100 border-slate-300", iconColor: "text-slate-500", bar: "bg-slate-400" },
+  WA: { icon: LuCircleX, ...NOT_AC_META },
+  CE: { icon: LuCircleAlert, ...NOT_AC_META },
+  RE: { icon: LuTriangleAlert, ...NOT_AC_META },
+  TLE: { icon: LuClock, ...NOT_AC_META },
+  OLE: { icon: LuAlignJustify, ...NOT_AC_META },
 };
 
-function Field({ title, icon: Icon, tone, text }: { title: string; icon: IconType; tone: string; text: string }) {
+function Field({ title, text }: { title: string; text: string }) {
   return (
     <div>
-      <h4 className={`mb-1 flex items-center gap-1 text-[10px] font-bold ${tone}`}>
-        <Icon className="h-3 w-3" />
-        {title}
-      </h4>
+      <h4 className="mb-1 text-[10px] font-bold text-slate-400">{title}</h4>
       <pre className="max-h-28 overflow-auto rounded-lg bg-slate-50 px-3 py-1.5 font-mono text-xs leading-relaxed text-slate-700">
         {text || "(出力なし)"}
       </pre>
@@ -66,7 +54,8 @@ export default function RunResult({ result }: { result: JudgeResult }) {
         <div className={`h-full rounded-full transition-all duration-500 ${meta.bar}`} style={{ width: `${ratio}%` }} />
       </div>
 
-      <p className="mt-2.5 text-xs leading-relaxed text-slate-600">{STATUS_DESCRIPTIONS[result.status]}</p>
+      {/* failedCaseがあるときは以下のケース説明と内容が重複するため、説明文はfailedCaseが無いときだけ出す */}
+      {!result.failedCase && <p className="mt-2.5 text-xs leading-relaxed text-slate-600">{STATUS_DESCRIPTIONS[result.status]}</p>}
 
       {result.failedCase && (
         <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
@@ -75,22 +64,20 @@ export default function RunResult({ result }: { result: JudgeResult }) {
               ? `テストケース${result.failedCase.index + 1}での結果です`
               : "追加チェックで失敗しました。このケースを見てみましょう"}
           </p>
-          <Field title="入力" icon={LuLogIn} tone="text-slate-400" text={result.failedCase.input} />
+          <Field title="入力" text={result.failedCase.input} />
           {result.status === "WA" && (
             <>
-              <Field title="期待する出力" icon={LuTarget} tone="text-green-500" text={result.failedCase.expected} />
-              <Field title="あなたの出力" icon={LuUser} tone="text-red-500" text={result.failedCase.actual} />
+              <Field title="期待する出力" text={result.failedCase.expected} />
+              <Field title="あなたの出力" text={result.failedCase.actual} />
             </>
           )}
-          {result.failedCase.errorMessage && (
-            <Field title="エラー内容" icon={LuTriangleAlert} tone="text-amber-500" text={result.failedCase.errorMessage} />
-          )}
+          {result.failedCase.errorMessage && <Field title="エラー内容" text={result.failedCase.errorMessage} />}
         </div>
       )}
 
       {!result.failedCase && result.message && (
         <div className="mt-3 border-t border-slate-100 pt-3">
-          <Field title="メッセージ" icon={LuCircleAlert} tone="text-slate-400" text={result.message} />
+          <Field title="メッセージ" text={result.message} />
         </div>
       )}
     </div>
