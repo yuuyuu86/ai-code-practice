@@ -67,7 +67,7 @@ export async function generateProblem(
         );
 
         const parsedOutline = parseProblemOutline(outlineResponse);
-        const outlineCheck = checkOutline(parsedOutline);
+        const outlineCheck = checkOutline(parsedOutline, input.difficulty);
         if (outlineCheck.ok) {
           outline = parsedOutline;
           break;
@@ -96,7 +96,7 @@ export async function generateProblem(
       );
       const details = parseProblemDetails(detailsResponse);
       const spec = mergeSpec(outline, details);
-      const specCheck = checkSpec(spec);
+      const specCheck = checkSpec(spec, input.difficulty);
       if (!specCheck.ok) {
         failureReason = compactFailureReason(decorateFailureReason(specCheck.reason, detailsResponse));
         console.warn(`[generateProblem] 試行${attempt} 詳細生成NG: ${specCheck.reason}\n生出力:\n`, detailsResponse);
@@ -201,8 +201,37 @@ export async function generateProblem(
   };
 }
 
+/** タイトルに "Advanced" "Level" などの英語ラベル/レベル表記が付いていないか */
+function checkTitleLabel(title: string): { ok: true } | { ok: false; reason: string } {
+  if (/\b(advanced|beginner|intermediate|expert|basic|easy|hard|medium|level|problem|question|task|step\s*\d)\b/i.test(title)) {
+    return {
+      ok: false,
+      reason: "タイトルに「Advanced」「Level」などの英語ラベルやレベル表記を付けないでください。日本語の問題名だけにしてください",
+    };
+  }
+  return { ok: true };
+}
+
+/** 難易度が入門以外なのに、単純な2数の和で終わる問題になっていないか */
+function checkTrivialForDifficulty(
+  difficulty: string,
+  text: string,
+): { ok: true } | { ok: false; reason: string } {
+  if (difficulty === "入門") return { ok: true };
+  const trivialSum =
+    /(2\s*つの(整数|数)).{0,12}(和|合計)/.test(text) ||
+    /\bA\b.{0,4}(と|、|,|＋|\+).{0,4}\bB\b.{0,12}(和|合計|足)/.test(text);
+  if (trivialSum) {
+    return {
+      ok: false,
+      reason: `難易度が「${difficulty}」なので、「2つの数の和」のような1回の足し算で終わる問題にはしないでください。複数の手順が必要な問題にしてください`,
+    };
+  }
+  return { ok: true };
+}
+
 /** 第1段階の仕様が十分か軽くチェックする */
-function checkSpec(spec: ProblemSpec): { ok: true } | { ok: false; reason: string } {
+function checkSpec(spec: ProblemSpec, difficulty: string): { ok: true } | { ok: false; reason: string } {
   if (!spec.title.trim()) return { ok: false, reason: "タイトルが読み取れませんでした。[TITLE]見出しを使ってください" };
   if (!spec.statement.trim()) return { ok: false, reason: "問題文が読み取れませんでした。[STATEMENT]見出しを使ってください" };
   if (!spec.inputFormat.trim()) return { ok: false, reason: "入力形式が読み取れませんでした。[INPUT_FORMAT]見出しを使ってください" };
@@ -210,6 +239,10 @@ function checkSpec(spec: ProblemSpec): { ok: true } | { ok: false; reason: strin
   if (spec.inputs.length < 3) {
     return { ok: false, reason: `入力例が${spec.inputs.length}個しかありません。[INPUTS]に ==== 区切りで5個書いてください` };
   }
+  const titleLabel = checkTitleLabel(spec.title);
+  if (!titleLabel.ok) return titleLabel;
+  const trivial = checkTrivialForDifficulty(difficulty, `${spec.title}\n${spec.statement}\n${spec.outputFormat}`);
+  if (!trivial.ok) return trivial;
   const nonJapanese = findNonJapaneseReason(
     [spec.title, spec.statement, spec.inputFormat, spec.outputFormat, ...spec.constraints, ...spec.hints, spec.explanation].join(
       "\n",
@@ -229,11 +262,15 @@ function checkSpec(spec: ProblemSpec): { ok: true } | { ok: false; reason: strin
   return { ok: true };
 }
 
-function checkOutline(outline: ProblemOutline): { ok: true } | { ok: false; reason: string } {
+function checkOutline(outline: ProblemOutline, difficulty: string): { ok: true } | { ok: false; reason: string } {
   if (!outline.title.trim()) return { ok: false, reason: "タイトルが読み取れませんでした。[TITLE]見出しを使ってください" };
   if (!outline.statement.trim()) return { ok: false, reason: "問題文が読み取れませんでした。[STATEMENT]見出しを使ってください" };
   if (!outline.inputFormat.trim()) return { ok: false, reason: "入力形式が読み取れませんでした。[INPUT_FORMAT]見出しを使ってください" };
   if (!outline.outputFormat.trim()) return { ok: false, reason: "出力形式が読み取れませんでした。[OUTPUT_FORMAT]見出しを使ってください" };
+  const titleLabel = checkTitleLabel(outline.title);
+  if (!titleLabel.ok) return titleLabel;
+  const trivial = checkTrivialForDifficulty(difficulty, `${outline.title}\n${outline.statement}\n${outline.outputFormat}`);
+  if (!trivial.ok) return trivial;
   const nonJapanese = findNonJapaneseReason(
     [outline.title, outline.statement, outline.inputFormat, outline.outputFormat].join("\n"),
   );
