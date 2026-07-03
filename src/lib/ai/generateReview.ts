@@ -1,9 +1,23 @@
-import type { JudgeResult } from "@/types/judge";
+import type { JudgeResult, JudgeStatus } from "@/types/judge";
 import type { Problem, Language } from "@/types/problem";
 import type { Review } from "@/types/submission";
 import { chat, isWebGPUAvailable } from "./webllmClient";
 import { buildReviewPrompt, parseDelimitedReview } from "./prompts";
 import { STATUS_DESCRIPTIONS } from "@/lib/judge/status";
+
+/** 行コメント・ブロックコメント・空白を除いて、コードに実質的な中身があるか判定する */
+function isCodeEffectivelyEmpty(code: string, language: Language): boolean {
+  let stripped = code.replace(/\/\*[\s\S]*?\*\//g, ""); // C/JSのブロックコメント
+  const lineComment = language === "python" ? "#" : "//";
+  stripped = stripped
+    .split("\n")
+    .map((line) => {
+      const idx = line.indexOf(lineComment);
+      return idx >= 0 ? line.slice(0, idx) : line;
+    })
+    .join("");
+  return stripped.trim() === "";
+}
 
 /**
  * レビュー生成(2層)。
@@ -17,6 +31,12 @@ export async function generateReview(params: {
   judgeResult: JudgeResult;
 }): Promise<Review> {
   const machine = buildMachineReview(params.judgeResult);
+
+  // コードが空(テンプレやコメントだけ)なら、AIに投げず捏造を防ぐ。
+  // 空コードにコードの中身を語らせると、存在しない処理をでっち上げるため。
+  if (isCodeEffectivelyEmpty(params.code, params.language)) {
+    return buildEmptyCodeReview(params.judgeResult.status);
+  }
 
   if (!isWebGPUAvailable()) {
     return machine;
@@ -39,13 +59,14 @@ export async function generateReview(params: {
     );
     const parsed = parseDelimitedReview(response);
     if (parsed && (parsed.cause || parsed.direction || parsed.nextStep)) {
-      // 部分的に取れたAI文を優先し、欠けた項目だけ機械レビューで補う
+      // 部分的に取れたAI文を優先し、欠けた項目だけ機械レビューで補う。
+      // モデルが指示に反して答えのコードを書いた場合に備え、コードブロックは除去する。
       return {
         // 結果は必ずJudge Engineの判定を使う(AIには変えさせない)
         result: `${params.judgeResult.status}(${STATUS_DESCRIPTIONS[params.judgeResult.status]})`,
-        cause: parsed.cause || machine.cause,
-        direction: parsed.direction || machine.direction,
-        nextStep: parsed.nextStep || machine.nextStep,
+        cause: stripCodeBlocks(parsed.cause) || machine.cause,
+        direction: stripCodeBlocks(parsed.direction) || machine.direction,
+        nextStep: stripCodeBlocks(parsed.nextStep) || machine.nextStep,
         aiGenerated: true,
       };
     }
@@ -97,6 +118,30 @@ function buildMachineReview(judgeResult: JudgeResult): Review {
   return {
     result: `${status}(${STATUS_DESCRIPTIONS[status]})`,
     ...t,
+    aiGenerated: false,
+  };
+}
+
+/**
+ * レビュー文からコードブロックを取り除く。
+ * 学習目的で答えのコードは見せない方針。```で囲まれた部分と、
+ * それに続く連続したコード行(=で代入している等)をまとめて除去する。
+ */
+function stripCodeBlocks(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, "") // 閉じたコードフェンス
+    .replace(/```[\s\S]*$/g, "") // 閉じ忘れフェンス以降
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** コードがまだ書かれていないときの案内レビュー(AIには投げない) */
+function buildEmptyCodeReview(status: JudgeStatus): Review {
+  return {
+    result: `${status}(${STATUS_DESCRIPTIONS[status]})`,
+    cause: "まだコードが書かれていないようです。エディタには最初のコメントしかありません。",
+    direction: "問題文の入力形式と出力形式を読んで、まずは入力を受け取る1行から書き始めてみましょう。",
+    nextStep: "コメントの下に、入力を読む処理と結果を出力する処理を1行ずつ書いて、もう一度実行してみましょう。",
     aiGenerated: false,
   };
 }
