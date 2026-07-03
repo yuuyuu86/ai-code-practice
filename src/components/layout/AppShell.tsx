@@ -244,6 +244,7 @@ export default function AppShell() {
         />
 
         <EditorPanel
+          problem={problem}
           language={language}
           code={code}
           running={running}
