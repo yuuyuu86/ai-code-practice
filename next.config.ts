@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // ブラウザのconsoleログをdevサーバーのターミナルへ転送する機能を無効化する。
+  // Next 16ではデフォルト有効('warn')だが、転送時にRust製ハイライタ
+  // (next-code-frame)が該当ソース行のコードフレームを描画する際、日本語などの
+  // マルチバイト文字の途中でバイト境界を切ってパニックし、devサーバーごと
+  // 落ちるバグがある(16.2.10時点、Turbopack/webpack共通)。
+  // このアプリはUI文言が日本語でconsole.warnも多いため、修正版が出るまで切る。
+  logging: {
+    browserToTerminal: false,
+  },
   // ワークスペースのルートをこのプロジェクトに固定する。
   // 指定しないと親ディレクトリ(例: ~/package-lock.json)を検出して
   // Turbopackがルートを ~/ に誤推論し、ホーム全体を監視 → 内部エラーで
