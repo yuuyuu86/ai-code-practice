@@ -1,21 +1,62 @@
 import type { Review } from "@/types/submission";
 import type { RunnerResultType } from "@/lib/runners/types";
 import type { KnockProblem } from "@/data/knock100";
+import type { KnockVerdict } from "@/lib/knock/knockJudge";
 import { chat, isWebGPUAvailable, type LoadProgress } from "./webllmClient";
 import { buildKnockReviewPrompt, parseDelimitedReview } from "./prompts";
 import { isCodeEffectivelyEmpty, stripCodeBlocks } from "./generateReview";
 
 /** 実行結果から機械的に作る「結果」欄の文言。AIには書かせない。 */
 const RUN_RESULT_LABELS: Record<RunnerResultType, string> = {
-  success: "実行できました(合否の自動判定はしていません)",
+  success: "実行できました",
   "compile-error": "コンパイルエラー(プログラムを作れませんでした)",
   "runtime-error": "実行時エラー(途中で止まりました)",
   timeout: "時間切れ(2秒以内に終わりませんでした)",
   "output-limit": "出力が多すぎます(10,000文字を超えました)",
 };
 
+/** 「結果」欄の文言。合否が出ているときはそれを優先する(事実はAIに作らせない)。 */
+function resultLabelOf(runType: RunnerResultType, verdict: KnockVerdict | null): string {
+  if (runType !== "success") return RUN_RESULT_LABELS[runType];
+  if (!verdict) return RUN_RESULT_LABELS.success;
+  switch (verdict.kind) {
+    case "AC":
+      return "正解(模範解答と同じ出力になりました)";
+    case "WA":
+      return "不正解(模範解答と出力が違います)";
+    case "skipped":
+      return `実行できました(この問題は自動判定できません: ${verdict.reason})`;
+    case "unavailable":
+      return "実行できました(合否は判定できませんでした)";
+  }
+}
+
 /** AIが使えない/失敗したときに必ず返せる固定文レビュー */
-function buildMachineKnockReview(runType: RunnerResultType): Review {
+function buildMachineKnockReview(
+  runType: RunnerResultType,
+  verdict: KnockVerdict | null,
+  resultLabel: string,
+): Review {
+  // 合否が出ている場合は、それに合った文面を優先する
+  if (runType === "success" && verdict?.kind === "AC") {
+    return {
+      result: resultLabel,
+      cause: "模範解答と同じ出力になりました。問題の要件を満たせています。",
+      direction: "コードを読み返して、変数名や書き方をさらに良くできないか考えてみましょう。",
+      nextStep: "次の問題や、少し難しい単元にも挑戦してみましょう。",
+      aiGenerated: false,
+    };
+  }
+  if (runType === "success" && verdict?.kind === "WA") {
+    return {
+      result: resultLabel,
+      cause: "プログラムは動きましたが、出力が模範解答と違っています。",
+      direction: "期待する出力と自分の出力を1行ずつ見比べて、どこが違うか探してみましょう。",
+      nextStep: "違っている行に関係する計算や表示の部分を、問題文と照らして直してみましょう。",
+      aiGenerated: false,
+    };
+  }
+
   const templates: Record<RunnerResultType, Omit<Review, "result" | "aiGenerated">> = {
     success: {
       cause: "プログラムは最後まで実行できました。出力が問題文の指示どおりか、自分の目で確かめてみましょう。",
@@ -45,16 +86,16 @@ function buildMachineKnockReview(runType: RunnerResultType): Review {
   };
 
   return {
-    result: RUN_RESULT_LABELS[runType],
+    result: resultLabel,
     ...templates[runType],
     aiGenerated: false,
   };
 }
 
 /** コードがまだ書かれていないときの案内(AIには投げない) */
-function buildEmptyCodeKnockReview(runType: RunnerResultType): Review {
+function buildEmptyCodeKnockReview(resultLabel: string): Review {
   return {
-    result: RUN_RESULT_LABELS[runType],
+    result: resultLabel,
     cause: "まだコードが書かれていないようです。エディタには最初のコメントしかありません。",
     direction: "問題文を読んで、まずは表示や入力を行う1行から書き始めてみましょう。",
     nextStep: "printf で何か1行表示するところから始めて、もう一度実行してみましょう。",
@@ -75,13 +116,16 @@ export async function generateKnockReview(params: {
   stdout: string;
   stderr: string;
   runType: RunnerResultType;
+  /** 模範解答と比較した合否(判定できなかった場合はnull) */
+  verdict: KnockVerdict | null;
   onProgress?: (p: LoadProgress) => void;
 }): Promise<Review> {
-  const machine = buildMachineKnockReview(params.runType);
+  const resultLabel = resultLabelOf(params.runType, params.verdict);
+  const machine = buildMachineKnockReview(params.runType, params.verdict, resultLabel);
 
   // 空コードにコードの中身を語らせると存在しない処理を捏造するため、AIに投げない
   if (isCodeEffectivelyEmpty(params.code, "c")) {
-    return buildEmptyCodeKnockReview(params.runType);
+    return buildEmptyCodeKnockReview(resultLabel);
   }
 
   if (!isWebGPUAvailable()) {
@@ -98,6 +142,7 @@ export async function generateKnockReview(params: {
       stdout: params.stdout,
       stderr: params.stderr,
       runType: params.runType,
+      verdict: params.verdict,
     });
     const response = await chat(
       [
@@ -109,8 +154,8 @@ export async function generateKnockReview(params: {
     const parsed = parseDelimitedReview(response);
     if (parsed && (parsed.cause || parsed.direction || parsed.nextStep)) {
       return {
-        // 結果欄は実行結果から機械的に作る(AIに事実を変えさせない)
-        result: RUN_RESULT_LABELS[params.runType],
+        // 結果欄は実行結果と判定から機械的に作る(AIに事実を変えさせない)
+        result: resultLabel,
         cause: stripCodeBlocks(parsed.cause) || machine.cause,
         direction: stripCodeBlocks(parsed.direction) || machine.direction,
         nextStep: stripCodeBlocks(parsed.nextStep) || machine.nextStep,

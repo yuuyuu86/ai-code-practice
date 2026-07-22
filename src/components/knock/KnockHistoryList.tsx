@@ -8,14 +8,26 @@ function formatTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-// 合否ではないので「実行できたか」だけを2トーンで示す。
+const AMBER = "bg-amber-50 text-amber-700 border-amber-200";
+const GREEN = "bg-green-100 text-green-700 border-green-300";
+
 const RUN_BADGE: Record<RunnerResultType, { label: string; style: string }> = {
-  success: { label: "実行", style: "bg-green-100 text-green-700 border-green-300" },
-  "compile-error": { label: "CE", style: "bg-amber-50 text-amber-700 border-amber-200" },
-  "runtime-error": { label: "RE", style: "bg-amber-50 text-amber-700 border-amber-200" },
-  timeout: { label: "TLE", style: "bg-amber-50 text-amber-700 border-amber-200" },
-  "output-limit": { label: "OLE", style: "bg-amber-50 text-amber-700 border-amber-200" },
+  success: { label: "実行", style: GREEN },
+  "compile-error": { label: "CE", style: AMBER },
+  "runtime-error": { label: "RE", style: AMBER },
+  timeout: { label: "TLE", style: AMBER },
+  "output-limit": { label: "OLE", style: AMBER },
 };
+
+/** 合否が出ていればそれを、無ければ実行できたかを示す */
+function badgeOf(s: KnockSubmission): { label: string; style: string } {
+  if (s.runType === "success" && s.verdict) {
+    if (s.verdict.kind === "AC") return { label: "AC", style: GREEN };
+    if (s.verdict.kind === "WA") return { label: "WA", style: AMBER };
+    return { label: "判定なし", style: AMBER };
+  }
+  return RUN_BADGE[s.runType];
+}
 
 export default function KnockHistoryList({
   submissions,
@@ -35,7 +47,7 @@ export default function KnockHistoryList({
   return (
     <ul className="space-y-1.5">
       {submissions.map((s) => {
-        const badge = RUN_BADGE[s.runType];
+        const badge = badgeOf(s);
         return (
           <li key={s.id} className="group relative">
             <button

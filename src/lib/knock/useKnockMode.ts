@@ -8,6 +8,7 @@ import type { RunnerResult } from "@/lib/runners/types";
 import { DEFAULT_OUTPUT_LIMIT, DEFAULT_TIMEOUT_MS } from "@/lib/runners/types";
 import { getRunner } from "@/lib/runners/runnerManager";
 import { generateKnockReview } from "@/lib/ai/generateKnockReview";
+import { judgeKnock, type KnockVerdict } from "@/lib/knock/knockJudge";
 import { getDraft, saveDraft } from "@/lib/storage/drafts";
 import {
   clearKnockSubmissions,
@@ -47,6 +48,7 @@ export function useKnockMode() {
   const [running, setRunning] = useState(false);
   const [runLabel, setRunLabel] = useState<string | null>(null);
   const [runResult, setRunResult] = useState<RunnerResult | null>(null);
+  const [verdict, setVerdict] = useState<KnockVerdict | null>(null);
   const [review, setReview] = useState<Review | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewLabel, setReviewLabel] = useState<string | null>(null);
@@ -63,6 +65,7 @@ export function useKnockMode() {
   const selectProblem = useCallback(async (next: KnockProblem) => {
     setProblem(next);
     setRunResult(null);
+    setVerdict(null);
     setReview(null);
     setSelectedSubmissionId(null);
     setStdin("");
@@ -87,11 +90,12 @@ export function useKnockMode() {
     [problem],
   );
 
-  /** 実行 → AIレビュー → 履歴保存。合否判定は行わない。 */
+  /** 実行 → 模範解答と照合して合否判定 → AIレビュー → 履歴保存 */
   const run = useCallback(async () => {
     if (!problem || running) return;
     setRunning(true);
     setRunResult(null);
+    setVerdict(null);
     setReview(null);
     setSelectedSubmissionId(null);
     setRunLabel("実行中…(初回はCコンパイラの準備に時間がかかります)");
@@ -104,6 +108,20 @@ export function useKnockMode() {
         outputLimit: DEFAULT_OUTPUT_LIMIT,
       });
       setRunResult(result);
+
+      // 正常終了したときだけ、模範解答と突き合わせて合否を出す。
+      // CE/RE/TLE/OLE は実行結果の時点で不合格が明らかなので比較しない。
+      let judged: KnockVerdict | null = null;
+      if (result.type === "success") {
+        setRunLabel("模範解答と照合しています…");
+        try {
+          judged = await judgeKnock({ problem, stdin, userStdout: result.stdout });
+        } catch (err) {
+          console.warn("[useKnockMode] 合否判定に失敗:", err);
+          judged = { kind: "unavailable", reason: "模範解答の実行中にエラーが発生したため判定できませんでした" };
+        }
+      }
+      setVerdict(judged);
       setRunning(false);
       setRunLabel(null);
 
@@ -118,6 +136,7 @@ export function useKnockMode() {
           stdout: result.stdout,
           stderr: result.stderr,
           runType: result.type,
+          verdict: judged,
           onProgress: (p) => setReviewLabel(`AIモデルを読み込み中… ${Math.round(p.progress * 100)}%`),
         });
       } finally {
@@ -135,6 +154,7 @@ export function useKnockMode() {
         stdout: result.stdout,
         stderr: result.stderr,
         runType: result.type,
+        verdict: judged ?? undefined,
         review: rev,
         createdAt: new Date().toISOString(),
       };
@@ -159,6 +179,7 @@ export function useKnockMode() {
     setCode(s.code);
     setStdin(s.stdin);
     setRunResult({ type: s.runType, stdout: s.stdout, stderr: s.stderr, elapsedMs: 0 });
+    setVerdict(s.verdict ?? null);
     setReview(s.review ?? null);
     const restored = getKnockProblem(s.knockNo);
     if (restored) setProblem(restored);
@@ -171,6 +192,7 @@ export function useKnockMode() {
       if (selectedSubmissionId === s.id) {
         setSelectedSubmissionId(null);
         setRunResult(null);
+        setVerdict(null);
         setReview(null);
       }
     },
@@ -183,6 +205,7 @@ export function useKnockMode() {
     setSubmissions([]);
     setSelectedSubmissionId(null);
     setRunResult(null);
+    setVerdict(null);
     setReview(null);
   }, []);
 
@@ -194,6 +217,7 @@ export function useKnockMode() {
     running,
     runLabel,
     runResult,
+    verdict,
     review,
     reviewLoading,
     reviewLabel,
