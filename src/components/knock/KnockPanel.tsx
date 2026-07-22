@@ -4,6 +4,7 @@ import { LuShuffle } from "react-icons/lu";
 import type { KnockGroup, KnockProblem } from "@/data/knock100";
 import { KNOCK_GROUPS, KNOCK_PROBLEMS } from "@/data/knock100";
 import { describeJudgeMethod } from "@/lib/knock/knockJudge";
+import { getOutputSpec } from "@/data/knockOutputSpecs";
 
 type Props = {
   problem: KnockProblem | null;
@@ -19,6 +20,7 @@ const selectClass =
 export default function KnockPanel(props: Props) {
   const list =
     props.group === "すべて" ? KNOCK_PROBLEMS : KNOCK_PROBLEMS.filter((p) => p.group === props.group);
+  const outputSpec = props.problem ? getOutputSpec(props.problem.no) : undefined;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto pr-1">
@@ -64,6 +66,13 @@ export default function KnockPanel(props: Props) {
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
             {props.problem.statement}
           </p>
+          {/* 問題文だけでは出力の書き方が決まらない問題は、採点に合わせる形式を補足する */}
+          {outputSpec && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] leading-relaxed text-amber-800">
+              <span className="font-bold">出力の形式: </span>
+              {outputSpec}
+            </p>
+          )}
           <p className="mt-2 border-t border-slate-100 pt-2 text-[11px] leading-relaxed text-slate-400">
             {describeJudgeMethod(props.problem.no)}
           </p>

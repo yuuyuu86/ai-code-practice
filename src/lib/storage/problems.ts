@@ -15,6 +15,18 @@ export async function getGeneratedProblem(id: string): Promise<Problem | undefin
   return db.get("generatedProblems", id);
 }
 
+/** 生成済み問題を新しい順に返す。実行せずに終わった問題にも戻れるようにするため。 */
+export async function listGeneratedProblems(limit = 50): Promise<Problem[]> {
+  const db = await getDB();
+  const all = await db.getAllFromIndex("generatedProblems", "by-createdAt");
+  return all.reverse().slice(0, limit);
+}
+
+export async function deleteGeneratedProblem(id: string): Promise<void> {
+  const db = await getDB();
+  await db.delete("generatedProblems", id);
+}
+
 /** 検証を通過した問題をフォールバック用にキャッシュする */
 export async function cacheAIProblem(problem: Problem, language: Language): Promise<void> {
   const db = await getDB();

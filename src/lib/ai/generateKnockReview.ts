@@ -5,6 +5,7 @@ import type { KnockVerdict } from "@/lib/knock/knockJudge";
 import { chat, isWebGPUAvailable, type LoadProgress } from "./webllmClient";
 import { buildKnockReviewPrompt, parseDelimitedReview } from "./prompts";
 import { isCodeEffectivelyEmpty, stripCodeBlocks } from "./generateReview";
+import { getOutputSpec } from "@/data/knockOutputSpecs";
 
 /** 実行結果から機械的に作る「結果」欄の文言。AIには書かせない。 */
 const RUN_RESULT_LABELS: Record<RunnerResultType, string> = {
@@ -138,7 +139,10 @@ export async function generateKnockReview(params: {
     const { system, user } = buildKnockReviewPrompt({
       knockNo: params.problem.no,
       title: params.problem.title,
-      statement: params.problem.statement,
+      // 問題文に無い出力形式(No.90の spring など)はAIも知らないと的外れな指摘をするため渡す
+      statement: [params.problem.statement, getOutputSpec(params.problem.no) && `出力の形式: ${getOutputSpec(params.problem.no)}`]
+        .filter(Boolean)
+        .join("\n"),
       code: params.code,
       stdin: params.stdin,
       stdout: params.stdout,

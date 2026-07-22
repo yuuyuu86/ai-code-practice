@@ -9,7 +9,11 @@ import { generateReview } from "@/lib/ai/generateReview";
 import { judge } from "@/lib/judge/judge";
 import { getLanguageConfig } from "@/lib/languages";
 import { getDraft, saveDraft } from "@/lib/storage/drafts";
-import { getGeneratedProblem } from "@/lib/storage/problems";
+import {
+  deleteGeneratedProblem,
+  getGeneratedProblem,
+  listGeneratedProblems,
+} from "@/lib/storage/problems";
 import { clearSubmissions, deleteSubmission, listSubmissions, saveSubmission } from "@/lib/storage/submissions";
 import { getSetting, setSetting } from "@/lib/storage/settings";
 import { useKnockMode } from "@/lib/knock/useKnockMode";
@@ -47,6 +51,7 @@ export default function AppShell() {
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [generatedProblems, setGeneratedProblems] = useState<Problem[]>([]);
 
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -56,6 +61,7 @@ export default function AppShell() {
   // 初期化: 履歴と前回設定の読み込み
   useEffect(() => {
     listSubmissions().then(setSubmissions).catch(console.warn);
+    listGeneratedProblems().then(setGeneratedProblems).catch(console.warn);
     getSetting<AppMode>("lastMode")
       .then((saved) => {
         if (saved === "ai" || saved === "knock") setMode(saved);
@@ -132,6 +138,7 @@ export default function AppShell() {
         setFromCache(result.fromCache);
         const draft = await getDraft(result.problem.id, language);
         setCode(draft ?? getLanguageConfig(language).template);
+        setGeneratedProblems(await listGeneratedProblems());
       } else {
         setGenerateError(result.message);
       }
@@ -226,6 +233,34 @@ export default function AppShell() {
     setReview(null);
   }, []);
 
+  // 生成済み問題を選び直す(実行せずに終わった問題にも戻れるように)
+  const handleSelectGenerated = useCallback(
+    async (p: Problem) => {
+      setProblem(p);
+      setFromCache(false);
+      setJudgeResult(null);
+      setReview(null);
+      setSelectedSubmissionId(null);
+      const draft = await getDraft(p.id, language);
+      setCode(draft ?? getLanguageConfig(language).template);
+    },
+    [language],
+  );
+
+  const handleDeleteGenerated = useCallback(
+    async (p: Problem) => {
+      await deleteGeneratedProblem(p.id);
+      setGeneratedProblems((prev) => prev.filter((x) => x.id !== p.id));
+      // 表示中の問題を消したら、問題未選択の状態に戻す
+      if (problem?.id === p.id) {
+        setProblem(null);
+        setJudgeResult(null);
+        setReview(null);
+      }
+    },
+    [problem],
+  );
+
   // 履歴クリックで過去のコード・結果・レビューを復元
   const handleSelectSubmission = useCallback(async (s: Submission) => {
     setSelectedSubmissionId(s.id);
@@ -282,10 +317,13 @@ export default function AppShell() {
               generating={generating}
               genView={genView}
               generateError={generateError}
+              generatedProblems={generatedProblems}
               onLanguageChange={handleLanguageChange}
               onDifficultyChange={setDifficulty}
               onTopicChange={setTopic}
               onGenerate={handleGenerate}
+              onSelectGenerated={handleSelectGenerated}
+              onDeleteGenerated={handleDeleteGenerated}
             />
           )}
         </div>
