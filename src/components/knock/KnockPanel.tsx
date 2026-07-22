@@ -3,6 +3,7 @@
 import { LuShuffle } from "react-icons/lu";
 import type { KnockGroup, KnockProblem } from "@/data/knock100";
 import { KNOCK_GROUPS, KNOCK_PROBLEMS } from "@/data/knock100";
+import { describeJudgeMethod } from "@/lib/knock/knockJudge";
 
 type Props = {
   problem: KnockProblem | null;
@@ -62,6 +63,9 @@ export default function KnockPanel(props: Props) {
           <h2 className="mt-2.5 text-base font-bold text-slate-800">{props.problem.title}</h2>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
             {props.problem.statement}
+          </p>
+          <p className="mt-2 border-t border-slate-100 pt-2 text-[11px] leading-relaxed text-slate-400">
+            {describeJudgeMethod(props.problem.no)}
           </p>
         </div>
       )}

@@ -21,9 +21,9 @@ function resultLabelOf(runType: RunnerResultType, verdict: KnockVerdict | null):
   if (!verdict) return RUN_RESULT_LABELS.success;
   switch (verdict.kind) {
     case "AC":
-      return "正解(模範解答と同じ出力になりました)";
+      return `正解(${verdict.total}件のテストすべてに合格)`;
     case "WA":
-      return "不正解(模範解答と出力が違います)";
+      return `不正解(${verdict.total}件中${verdict.passed}件が合格)`;
     case "skipped":
       return `実行できました(この問題は自動判定できません: ${verdict.reason})`;
     case "unavailable":
@@ -38,21 +38,23 @@ function buildMachineKnockReview(
   resultLabel: string,
 ): Review {
   // 合否が出ている場合は、それに合った文面を優先する
-  if (runType === "success" && verdict?.kind === "AC") {
+  if (verdict?.kind === "AC") {
     return {
       result: resultLabel,
-      cause: "模範解答と同じ出力になりました。問題の要件を満たせています。",
+      cause: "用意したテストケースすべてに合格しました。問題の要件を満たせています。",
       direction: "コードを読み返して、変数名や書き方をさらに良くできないか考えてみましょう。",
       nextStep: "次の問題や、少し難しい単元にも挑戦してみましょう。",
       aiGenerated: false,
     };
   }
-  if (runType === "success" && verdict?.kind === "WA") {
+  if (verdict?.kind === "WA") {
     return {
       result: resultLabel,
-      cause: "プログラムは動きましたが、出力が模範解答と違っています。",
-      direction: "期待する出力と自分の出力を1行ずつ見比べて、どこが違うか探してみましょう。",
-      nextStep: "違っている行に関係する計算や表示の部分を、問題文と照らして直してみましょう。",
+      cause: verdict.firstFailure.reason
+        ? `失敗したケースがあります: ${verdict.firstFailure.reason}`
+        : "一部のテストケースで、期待する出力と違う結果になりました。",
+      direction: "失敗したケースの入力と期待する出力を見比べて、どこが違うか探してみましょう。",
+      nextStep: "その入力のときに何が起きるかを手で追いかけて、原因の行を直してみましょう。",
       aiGenerated: false,
     };
   }

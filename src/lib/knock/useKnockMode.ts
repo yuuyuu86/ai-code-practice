@@ -109,16 +109,17 @@ export function useKnockMode() {
       });
       setRunResult(result);
 
-      // 正常終了したときだけ、模範解答と突き合わせて合否を出す。
-      // CE/RE/TLE/OLE は実行結果の時点で不合格が明らかなので比較しない。
+      // 採点は入力欄の値ではなく、用意した全テストケースで行う。
+      // (入力欄の1件だけで判定すると、答えをベタ書きしたコードも通ってしまう)
+      // コンパイルエラーのときは全ケースやっても同じ結果なので省く。
       let judged: KnockVerdict | null = null;
-      if (result.type === "success") {
-        setRunLabel("模範解答と照合しています…");
+      if (result.type !== "compile-error") {
+        setRunLabel("テストケースで採点しています…");
         try {
-          judged = await judgeKnock({ problem, stdin, userStdout: result.stdout });
+          judged = await judgeKnock({ problem, code });
         } catch (err) {
           console.warn("[useKnockMode] 合否判定に失敗:", err);
-          judged = { kind: "unavailable", reason: "模範解答の実行中にエラーが発生したため判定できませんでした" };
+          judged = { kind: "unavailable", reason: "採点中にエラーが発生したため判定できませんでした" };
         }
       }
       setVerdict(judged);
