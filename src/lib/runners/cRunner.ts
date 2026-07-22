@@ -80,13 +80,20 @@ async function loadClang(sdk: SDK): Promise<WasmerClass> {
 }
 
 // Judgeは同じコードを全テストケース分だけ run() する。毎回コンパイルすると遅いので、
-// 直近にコンパイルしたコードの .wasm をキャッシュして使い回す。
-let compileCache: { code: string; wasm: Uint8Array } | null = null;
+// コンパイル済みの .wasm をキャッシュして使い回す。
+// 教材モードの合否判定では「提出コード」と「模範解答」を交互にコンパイルするため、
+// 1件だけだと毎回キャッシュを取り合って必ず再コンパイルになる。複数件持たせる。
+const MAX_COMPILE_CACHE = 4;
+const compileCache = new Map<string, Uint8Array>();
 
 /** コンパイル成功なら wasm を、失敗なら CE 結果を返す */
 async function compile(sdk: SDK, code: string): Promise<{ ok: true; wasm: Uint8Array } | { ok: false; stderr: string }> {
-  if (compileCache && compileCache.code === code) {
-    return { ok: true, wasm: compileCache.wasm };
+  const cached = compileCache.get(code);
+  if (cached) {
+    // 直近に使ったものを末尾へ回して、古いものから捨てられるようにする
+    compileCache.delete(code);
+    compileCache.set(code, cached);
+    return { ok: true, wasm: cached };
   }
   const clang = await loadClang(sdk);
   const project = new sdk.Directory();
@@ -100,7 +107,11 @@ async function compile(sdk: SDK, code: string): Promise<{ ok: true; wasm: Uint8A
     return { ok: false, stderr: cleanupClangError(compileResult.stderr) || "コンパイルに失敗しました" };
   }
   const wasm = await project.readFile("main.wasm");
-  compileCache = { code, wasm };
+  compileCache.set(code, wasm);
+  if (compileCache.size > MAX_COMPILE_CACHE) {
+    // Mapは挿入順を保つので、先頭(最も古い)を捨てる
+    compileCache.delete(compileCache.keys().next().value!);
+  }
   return { ok: true, wasm };
 }
 

@@ -305,7 +305,7 @@ export default function AppShell() {
             resultNode={
               <>
                 <div className="min-h-0 overflow-y-auto">
-                  {knock.runResult && <KnockRunResult result={knock.runResult} />}
+                  {knock.runResult && <KnockRunResult result={knock.runResult} verdict={knock.verdict} />}
                 </div>
                 <div className="min-h-0 overflow-y-auto">
                   <ReviewPanel review={knock.review} loading={knock.reviewLoading} loadingLabel={knock.reviewLabel} />
