@@ -28,7 +28,7 @@ const RUN_META: Record<RunnerResultType, { icon: IconType; label: string; banner
 
 /** 合否が出ているときはそれを見出しにする(実行できたかより重要なため) */
 function bannerOf(result: RunnerResult, verdict: KnockVerdict | null) {
-  if (result.type !== "success" || !verdict) return RUN_META[result.type];
+  if (!verdict) return RUN_META[result.type];
   switch (verdict.kind) {
     case "AC":
       return {
@@ -41,21 +41,22 @@ function bannerOf(result: RunnerResult, verdict: KnockVerdict | null) {
       return { icon: LuCircleX, label: "不正解", ...NOT_OK };
     case "skipped":
     case "unavailable":
-      return { icon: LuCircleHelp, label: "実行できました(判定なし)", ...NOT_OK };
+      return { icon: LuCircleHelp, label: RUN_META[result.type].label + "(判定なし)", ...NOT_OK };
   }
 }
 
 /** バナー下の補足文 */
 function noteOf(result: RunnerResult, verdict: KnockVerdict | null): string {
-  if (result.type !== "success") return "エラーの内容を見て直してみましょう";
-  if (!verdict) return "出力が問題文どおりか確かめましょう";
+  if (!verdict) {
+    return result.type === "success" ? "出力が問題文どおりか確かめましょう" : "エラーの内容を見て直してみましょう";
+  }
   switch (verdict.kind) {
     case "AC":
-      return "模範解答と同じ出力になりました";
+      return `${verdict.total}件のテストすべてに合格しました`;
     case "WA":
-      return "模範解答と出力が違います。下の期待する出力と見比べましょう";
+      return `${verdict.total}件中${verdict.passed}件が合格。下の失敗したケースを見比べましょう`;
     case "skipped":
-      return `この問題は自動判定できません(${verdict.reason})。出力が問題文どおりか確かめましょう`;
+      return `自動採点できません(${verdict.reason})。出力が問題文どおりか確かめましょう`;
     case "unavailable":
       return verdict.reason;
   }
@@ -97,15 +98,30 @@ export default function KnockRunResult({
         </div>
       </div>
 
-      <div className="mt-3 space-y-2">
-        {verdict?.kind === "WA" && (
-          <Field title="期待する出力(模範解答)" text={verdict.expected} tone="text-green-500" />
-        )}
-        <Field
-          title={verdict?.kind === "WA" ? "あなたの出力" : "標準出力"}
-          text={result.stdout}
-          tone={verdict?.kind === "WA" ? "text-red-500" : undefined}
-        />
+      {/* 不合格のときは、失敗した最初のケースを見せる(どの入力で落ちたかが要る) */}
+      {verdict?.kind === "WA" && (
+        <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+          <p className="text-xs font-medium text-slate-500">失敗したケース</p>
+          <Field
+            title="入力"
+            text={verdict.firstFailure.input === "" ? "(入力なし)" : verdict.firstFailure.input}
+          />
+          {verdict.firstFailure.reason && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-700">
+              {verdict.firstFailure.reason}
+            </p>
+          )}
+          {verdict.firstFailure.expected !== null && (
+            <Field title="期待する出力" text={verdict.firstFailure.expected} tone="text-green-500" />
+          )}
+          <Field title="あなたの出力" text={verdict.firstFailure.actual} tone="text-red-500" />
+        </div>
+      )}
+
+      {/* 入力欄で試した分の結果(採点とは別に、自分で動きを確かめるためのもの) */}
+      <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+        <p className="text-xs font-medium text-slate-500">入力欄で試した結果</p>
+        <Field title="標準出力" text={result.stdout} />
         {result.stderr.trim() !== "" && <Field title="エラー出力" text={result.stderr} />}
       </div>
     </div>

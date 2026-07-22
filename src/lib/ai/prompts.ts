@@ -379,8 +379,17 @@ export function buildKnockReviewPrompt(params: {
   stdout: string;
   stderr: string;
   runType: string;
-  /** 模範解答と比較した合否。判定できた場合はAIに判定を覆させない */
-  verdict?: { kind: "AC" } | { kind: "WA"; expected: string } | { kind: string } | null;
+  /** テストケースによる合否。判定できた場合はAIに判定を覆させない */
+  verdict?:
+    | { kind: "AC"; passed: number; total: number }
+    | {
+        kind: "WA";
+        passed: number;
+        total: number;
+        firstFailure: { input: string; expected: string | null; actual: string; reason?: string };
+      }
+    | { kind: string }
+    | null;
 }): { system: string; user: string } {
   const runSummary =
     params.runType === "success"
@@ -395,21 +404,33 @@ export function buildKnockReviewPrompt(params: {
 
   // 合否が確定している場合はそれを事実として渡し、AIに覆させない
   const verdictKind = params.verdict?.kind;
-  const verdictSection =
-    verdictKind === "AC"
-      ? "\n判定: 正解(模範解答と同じ出力になりました)。この判定は確定しているので覆さないこと。\n"
-      : verdictKind === "WA"
-        ? `\n判定: 不正解(模範解答と出力が違います)。この判定は確定しているので覆さないこと。
-模範解答の出力:
-${(params.verdict as { expected: string }).expected}\n`
-        : "\n判定: この問題は自動判定できないため、要件を満たしているか自分で判断すること。\n";
-
-  const judgeRule =
-    verdictKind === "AC"
-      ? "- 判定は正解なので、CAUSEには良かった点(どの書き方が効いたか)を書く。間違い探しをしない。"
-      : verdictKind === "WA"
-        ? "- 判定は不正解。模範解答の出力と実際の出力のどこが違うかを見て、コードのどの部分が原因かを具体的に述べる。"
-        : "- この問題は自動判定していない。問題文の要件を満たしているかを、コードと上の実行結果から自分で判断して述べる。";
+  let verdictSection: string;
+  let judgeRule: string;
+  if (verdictKind === "AC") {
+    const v = params.verdict as { passed: number; total: number };
+    verdictSection = `\n判定: 正解(${v.total}件のテストすべてに合格)。この判定は確定しているので覆さないこと。\n`;
+    judgeRule = "- 判定は正解なので、CAUSEには良かった点(どの書き方が効いたか)を書く。間違い探しをしない。";
+  } else if (verdictKind === "WA") {
+    const v = params.verdict as {
+      passed: number;
+      total: number;
+      firstFailure: { input: string; expected: string | null; actual: string; reason?: string };
+    };
+    const f = v.firstFailure;
+    verdictSection = `\n判定: 不正解(${v.total}件中${v.passed}件が合格)。この判定は確定しているので覆さないこと。
+失敗したケース:
+入力: ${f.input === "" ? "(入力なし)" : f.input}
+${f.expected !== null ? `期待する出力:\n${f.expected}` : ""}
+実際の出力:
+${f.actual}
+${f.reason ? `違反した内容: ${f.reason}` : ""}\n`;
+    judgeRule =
+      "- 判定は不正解。上の「失敗したケース」の入力でなぜその出力になるのかを、コードのどの部分が原因か具体的に述べる。";
+  } else {
+    verdictSection = "\n判定: この問題は自動判定できないため、要件を満たしているか自分で判断すること。\n";
+    judgeRule =
+      "- この問題は自動判定していない。問題文の要件を満たしているかを、コードと上の実行結果から自分で判断して述べる。";
+  }
 
   const system = `あなたはプログラミング初心者にやさしいC言語のメンターです。合否の判定はすでに確定している場合があり、その場合あなたは判定を変えません。必ず提出コードの中身を読み、どの部分がどうなっているかを具体的に指摘します。指定されたセクション形式だけで出力します。`;
 
