@@ -12,12 +12,22 @@ import { getDraft, saveDraft } from "@/lib/storage/drafts";
 import { getGeneratedProblem } from "@/lib/storage/problems";
 import { clearSubmissions, deleteSubmission, listSubmissions, saveSubmission } from "@/lib/storage/submissions";
 import { getSetting, setSetting } from "@/lib/storage/settings";
+import { useKnockMode } from "@/lib/knock/useKnockMode";
 import type { GenerationView } from "@/components/problem/GenerationProgress";
+import RunResult from "@/components/result/RunResult";
+import ReviewPanel from "@/components/result/ReviewPanel";
+import HistoryList from "@/components/history/HistoryList";
+import KnockPanel from "@/components/knock/KnockPanel";
+import KnockRunResult from "@/components/knock/KnockRunResult";
+import KnockHistoryList from "@/components/knock/KnockHistoryList";
+import ModeTabs, { type AppMode } from "./ModeTabs";
 import LeftPanel from "./LeftPanel";
-import EditorPanel from "./EditorPanel";
+import EditorPanel, { type AnswerView } from "./EditorPanel";
 import HistorySidebar from "./HistorySidebar";
 
 export default function AppShell() {
+  const [mode, setMode] = useState<AppMode>("ai");
+
   const [language, setLanguage] = useState<Language>("python");
   const [difficulty, setDifficulty] = useState<Difficulty>("入門");
   const [topic, setTopic] = useState("入出力");
@@ -40,9 +50,17 @@ export default function AppShell() {
 
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 教材モードの状態とハンドラはフックに分離してAppShellの肥大化を防ぐ
+  const knock = useKnockMode();
+
   // 初期化: 履歴と前回設定の読み込み
   useEffect(() => {
     listSubmissions().then(setSubmissions).catch(console.warn);
+    getSetting<AppMode>("lastMode")
+      .then((saved) => {
+        if (saved === "ai" || saved === "knock") setMode(saved);
+      })
+      .catch(console.warn);
     getSetting<{ language: Language; difficulty: Difficulty; topic: string }>("lastSelection")
       .then((saved) => {
         if (saved) {
@@ -58,6 +76,10 @@ export default function AppShell() {
   useEffect(() => {
     setSetting("lastSelection", { language, difficulty, topic }).catch(console.warn);
   }, [language, difficulty, topic]);
+
+  useEffect(() => {
+    setSetting("lastMode", mode).catch(console.warn);
+  }, [mode]);
 
   const handleLanguageChange = useCallback(
     async (next: Language) => {
@@ -218,6 +240,18 @@ export default function AppShell() {
     }
   }, []);
 
+  const isKnock = mode === "knock";
+
+  // モードごとの模範解答。教材はC言語の解答をそのまま持っている。
+  const aiAnswer: AnswerView | null = problem
+    ? {
+        label: problem.referenceSolutions[language] ? getLanguageConfig(language).label : "Python",
+        code: problem.referenceSolutions[language] ?? problem.referenceSolutions.python,
+        explanation: problem.explanation,
+      }
+    : null;
+  const knockAnswer: AnswerView | null = knock.problem ? { label: "C", code: knock.problem.solution } : null;
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-slate-100">
       <header className="flex shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-5 py-2">
@@ -228,42 +262,103 @@ export default function AppShell() {
       </header>
 
       <main className="grid min-h-0 flex-1 grid-cols-[minmax(280px,22%)_1fr_minmax(200px,16%)] grid-rows-[minmax(0,1fr)] gap-3 p-3">
-        <LeftPanel
-          language={language}
-          difficulty={difficulty}
-          topic={topic}
-          problem={problem}
-          fromCache={fromCache}
-          generating={generating}
-          genView={genView}
-          generateError={generateError}
-          onLanguageChange={handleLanguageChange}
-          onDifficultyChange={setDifficulty}
-          onTopicChange={setTopic}
-          onGenerate={handleGenerate}
-        />
+        <div className="flex min-h-0 flex-col gap-2">
+          <ModeTabs mode={mode} onChange={setMode} />
+          {isKnock ? (
+            <KnockPanel
+              problem={knock.problem}
+              group={knock.group}
+              onGroupChange={knock.setGroup}
+              onPickRandom={knock.pickRandom}
+              onSelect={knock.selectProblem}
+            />
+          ) : (
+            <LeftPanel
+              language={language}
+              difficulty={difficulty}
+              topic={topic}
+              problem={problem}
+              fromCache={fromCache}
+              generating={generating}
+              genView={genView}
+              generateError={generateError}
+              onLanguageChange={handleLanguageChange}
+              onDifficultyChange={setDifficulty}
+              onTopicChange={setTopic}
+              onGenerate={handleGenerate}
+            />
+          )}
+        </div>
 
-        <EditorPanel
-          problem={problem}
-          language={language}
-          code={code}
-          running={running}
-          runLabel={runLabel}
-          canRun={problem !== null}
-          judgeResult={judgeResult}
-          review={review}
-          reviewLoading={reviewLoading}
-          onCodeChange={handleCodeChange}
-          onRun={handleRun}
-        />
+        {isKnock ? (
+          <EditorPanel
+            language="c"
+            code={knock.code}
+            running={knock.running}
+            runLabel={knock.runLabel}
+            canRun={knock.problem !== null}
+            answer={knockAnswer}
+            stdin={{ value: knock.stdin, onChange: knock.setStdin }}
+            answerResetKey={`knock-${knock.problem?.no ?? "none"}`}
+            emptyHint="まず問題を選んでください"
+            hasResults={knock.runResult !== null || knock.review !== null || knock.reviewLoading}
+            resultNode={
+              <>
+                <div className="min-h-0 overflow-y-auto">
+                  {knock.runResult && <KnockRunResult result={knock.runResult} />}
+                </div>
+                <div className="min-h-0 overflow-y-auto">
+                  <ReviewPanel review={knock.review} loading={knock.reviewLoading} loadingLabel={knock.reviewLabel} />
+                </div>
+              </>
+            }
+            onCodeChange={knock.changeCode}
+            onRun={knock.run}
+          />
+        ) : (
+          <EditorPanel
+            language={language}
+            code={code}
+            running={running}
+            runLabel={runLabel}
+            canRun={problem !== null}
+            answer={aiAnswer}
+            stdin={null}
+            answerResetKey={`${problem?.id ?? "none"}:${language}`}
+            emptyHint="まず問題を生成してください"
+            hasResults={judgeResult !== null || review !== null || reviewLoading}
+            resultNode={
+              <>
+                <div className="min-h-0 overflow-y-auto">{judgeResult && <RunResult result={judgeResult} />}</div>
+                <div className="min-h-0 overflow-y-auto">
+                  <ReviewPanel review={review} loading={reviewLoading} />
+                </div>
+              </>
+            }
+            onCodeChange={handleCodeChange}
+            onRun={handleRun}
+          />
+        )}
 
-        <HistorySidebar
-          submissions={submissions}
-          selectedId={selectedSubmissionId}
-          onSelect={handleSelectSubmission}
-          onDelete={handleDeleteSubmission}
-          onClear={handleClearSubmissions}
-        />
+        {isKnock ? (
+          <HistorySidebar count={knock.submissions.length} onClear={knock.clearSubmissions}>
+            <KnockHistoryList
+              submissions={knock.submissions}
+              selectedId={knock.selectedSubmissionId}
+              onSelect={knock.selectSubmission}
+              onDelete={knock.deleteSubmission}
+            />
+          </HistorySidebar>
+        ) : (
+          <HistorySidebar count={submissions.length} onClear={handleClearSubmissions}>
+            <HistoryList
+              submissions={submissions}
+              selectedId={selectedSubmissionId}
+              onSelect={handleSelectSubmission}
+              onDelete={handleDeleteSubmission}
+            />
+          </HistorySidebar>
+        )}
       </main>
     </div>
   );
