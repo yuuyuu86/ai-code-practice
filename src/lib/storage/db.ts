@@ -30,10 +30,6 @@ interface AppDB extends DBSchema {
     key: string; // `${problemId}:${language}`
     value: { key: string; problemId: string; language: string; code: string; updatedAt: string };
   };
-  reviews: {
-    key: string; // submissionId
-    value: { submissionId: string; review: string; createdAt: string };
-  };
   settings: {
     key: string;
     value: { key: string; value: unknown };
@@ -51,7 +47,7 @@ interface AppDB extends DBSchema {
 }
 
 const DB_NAME = "ai-code-practice";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null;
 
@@ -73,7 +69,6 @@ export function getDB(): Promise<IDBPDatabase<AppDB>> {
           subs.createIndex("by-createdAt", "createdAt");
 
           db.createObjectStore("codeDrafts", { keyPath: "key" });
-          db.createObjectStore("reviews", { keyPath: "submissionId" });
           db.createObjectStore("settings", { keyPath: "key" });
 
           db.createObjectStore("sources", { keyPath: "id" });
@@ -83,6 +78,14 @@ export function getDB(): Promise<IDBPDatabase<AppDB>> {
         if (oldVersion < 2) {
           const knockSubs = db.createObjectStore("knockSubmissions", { keyPath: "id" });
           knockSubs.createIndex("by-createdAt", "createdAt");
+        }
+        if (oldVersion < 3) {
+          // v2以前は reviews ストアを作っていたが、一度も使わなかった
+          // (レビューは submissions に埋め込み保存している)。
+          // 使っていないスキーマが残ると読む人を混乱させるので、既存ユーザーからは削除する。
+          // 型定義からは外したので、削除するだけのここでは緩い型に落として扱う。
+          const legacy = db as unknown as IDBDatabase;
+          if (legacy.objectStoreNames.contains("reviews")) legacy.deleteObjectStore("reviews");
         }
       },
     });

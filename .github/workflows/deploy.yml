@@ -30,6 +30,16 @@ jobs:
 
       - run: npm ci
 
+      # 壊れたまま公開しないよう、ビルド前に検証する
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint src
+
+      - name: Test
+        run: npm test
+
       - name: Build (static export)
         env:
           NEXT_STATIC_EXPORT: "1"

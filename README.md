@@ -1,6 +1,26 @@
 # AIコード練習 (ai-code-practice)
 
-ブラウザ内AIがプログラミング問題を生成し、ブラウザ内で実行・判定・レビューまで完結する初心者向け練習サイトです。**外部LLM APIは一切使いません(API料金ゼロ)。**
+ブラウザ内で問題の生成・実行・採点・レビューまで完結する初心者向けプログラミング練習サイトです。**外部LLM APIは一切使いません(API料金ゼロ)。**
+
+## 公開URL
+
+**https://yuuyuu86.github.io/ai-code-practice/**
+
+`main` に push すると GitHub Actions が自動でデプロイします。
+
+## 2つのモード
+
+画面左上のタブで切り替えます。AIモデルは両モードで共有され、先に使ったほうで読み込まれます。
+
+| | AI生成モード | 教材モード(100本ノック) |
+|---|---|---|
+| 問題 | WebLLMがその場で生成 | 担当教員の教材100問(C言語) |
+| 言語 | C / Python / JavaScript | C のみ |
+| 入力 | 生成されたテストケース | 標準入力欄に自分で入力(試し実行用) |
+| 採点 | Judge Engine (AC/WA/CE/RE/TLE/OLE) | 全テストケースで合否判定 |
+| レビュー | AI(結果/原因/直す方向/次の一手) | 同左 |
+
+教材の出典: [marugotoyusuke/Knock100](https://github.com/marugotoyusuke/Knock100) (作者の許諾を得て収録)
 
 ## 動かし方
 
@@ -11,32 +31,48 @@ npm run dev
 
 http://localhost:3000 を開く。
 
-- **推奨ブラウザ: Chrome / Edge(WebGPU対応版)**。AI問題生成はWebGPUを使います。
-- 初回の「問題を生成」ではAIモデル(約700MB)のダウンロードが走るため数分かかります。2回目以降はブラウザキャッシュから読み込みます。
+- **推奨ブラウザ: Chrome / Edge**。AI生成にはWebGPU、C言語の実行にはSharedArrayBufferが必要です。
+- 初回はAIモデル(約700MB)とCコンパイラ(clang, 数十MB)のダウンロードが走ります。2回目以降はブラウザキャッシュから読み込みます。
 
 検証コマンド:
 
 ```bash
-npm run lint   # ESLint
+npm test          # vitest(判定ロジックと教材データの整合性)
+npm run lint      # ESLint
 npx tsc --noEmit  # typecheck
-npm run build  # 本番ビルド(typecheck込み)
+npm run build     # 本番ビルド
 ```
 
-いずれも通過済み(Next.js 16 / Turbopack)。
+CIでも同じ検証を通してからデプロイします。
 
 ## アーキテクチャ
 
+### AI生成モード
 ```
 言語・難易度・単元を選ぶ
-→ WebLLM(ブラウザ内)でProblem JSONを生成
+→ WebLLM(ブラウザ内)で問題を生成(骨格→詳細→模範解答の3段階)
 → Validatorで構造チェック
 → referenceSolutions.pythonをPyodideで実行してexpectedを生成(AIのexpectedは信用しない)
 → Monaco Editorでコードを書く
 → 言語別Runner(Web Worker / Pyodide / Clang WASM)で実行
 → Judge EngineがAC/WA/CE/RE/TLE/OLEを判定(判定はAIに任せない)
-→ 機械レビュー + AIレビュー(結果/原因/直す方向/次の一手)
+→ 機械レビュー + AIレビュー
 → IndexedDBに履歴保存、クリックで復元
 ```
+
+### 教材モード
+```
+単元で絞る or ランダム出題 or 一覧から選ぶ
+→ Cでコードを書く(標準入力欄で自分の入力を試せる)
+→ 用意した全テストケースで採点(入力欄の値ではない)
+   ├ 93問: 提出コードと模範解答を同じ入力で実行して出力比較
+   └ 6問: 出力比較できないので性質チェック(乱数・自由記述)
+→ 「N件中M件合格」と失敗ケース(入力/期待/実際)を表示
+→ AIレビュー(判定は覆させない)
+→ IndexedDBに履歴保存
+```
+
+**なぜ1件でなく全ケースで採点するか**: 入力欄の1件だけで判定すると、答えをベタ書きしたコード(`printf("8")`)も正解になってしまうためです。
 
 ### ディレクトリ
 
@@ -63,11 +99,13 @@ src/
 ## AI問題生成(WebLLM)
 
 - ライブラリ: `@mlc-ai/web-llm` v0.2.84
-- **model_id確認済み**(`prebuiltAppConfig.model_list`をnode_modules内で確認):
-  - 第一候補: `Llama-3.2-1B-Instruct-q4f16_1-MLC`
-  - 読み込み失敗時の予備: `Qwen2.5-1.5B-Instruct-q4f16_1-MLC`
-- モデル読み込みは「問題を生成」ボタン押下時に開始。進捗%をUIに表示。
-- 生成 → JSON抽出 → 構造Validator → Pyodideで模範解答実行&expected生成 → サンプル出力との一致検証。失敗したら**失敗理由をプロンプトに渡して最大3回再生成**。
+- **model_id**(`src/lib/ai/webllmClient.ts`):
+  - 第一候補: `Qwen2.5-1.5B-Instruct-q4f16_1-MLC`
+  - 読み込み失敗時の予備: `Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC`
+  - (当初は Llama-3.2-1B を第一候補にしていたが、見出し付き構造化出力の追従が弱く崩れやすいため変更)
+- モデルはモジュールレベルでキャッシュされ、**AI生成モードと教材モードで共有**される。先に使ったほうで読み込まれ、進捗%をUIに表示。
+- 生成は3段階(骨格 → 制約・入力例 → 模範解答)。各段で検証し、失敗したら**失敗理由をプロンプトに渡して最大5回再生成**。
+- 小型モデル対策として、タイトルの英語ラベル("Advanced Level:" 等)は拒否ではなく**自動で除去**する。拒否だけだと同じ失敗を繰り返して試行回数を使い切るため。
 - 検証を通過した問題は `cachedAIProblems` にキャッシュ。
 
 ### フォールバック(テンプレ問題は使わない)
@@ -101,9 +139,25 @@ WebGPUが使えない/モデル読み込み失敗時:
   - stdin の受け渡し・stdout/stderr の取得 ✅
   - ブラウザとの差異: `runWasix(module)` はワーカー間の module シリアライズに失敗する環境があるため使わず、bytes を渡す **`fromWasm` 経由**に統一(ブラウザ/Nodeの両方で動く)。
 - **判定マッピング**: コンパイル失敗→CE / 非0終了・トラップ→RE / 2秒超過→TLE / 出力過多→OLE。
-- **最適化**: Judgeはテストケース分だけ `run()` を呼ぶため、同一コードの `.wasm` を `cRunner.ts` 内でキャッシュし、2回目以降はコンパイルを省いて実行のみ。
-- **前提**: `SharedArrayBuffer` 必須 → `next.config.ts` でCOOP(same-origin)/COEP(credentialless)を設定済み。Chrome/Edge系で動作。**FirefoxはCOEP credentiallessが弱く、C実行のみ不可**(Python/JS/問題生成は動く)。初回はclangのDLで時間がかかる(UIに「初回はCコンパイラの準備に時間がかかります」と表示)。
+- **最適化**: 同一コードの `.wasm` をキャッシュする。教材モードの採点では「提出コード」と「模範解答」を交互に実行するため、**キャッシュは複数件(LRU)持つ**。1件だけだと必ず取り合って再コンパイルになる。
+- **前提**: `SharedArrayBuffer` 必須 → COOP(same-origin)/COEP(credentialless)が要る。
+  - ローカル: `next.config.ts` の `headers()` が付ける
+  - GitHub Pages: 静的ホスティングではヘッダーを設定できないため、**Service Worker(`public/coi-serviceworker.js`)がレスポンスに付け直す**
+  - Chrome/Edge系で動作。**FirefoxはCOEP credentiallessが弱く、C実行のみ不可**(Python/JS/問題生成は動く)
 - **差し替え**: `LanguageRunner` インターフェースは不変なので、別のClang/WASI実装へ移す場合も `cRunner.ts` の中身だけ変更すればよい。
+
+## 教材モードの採点
+
+`src/lib/knock/knockJudge.ts` が全テストケースで採点する。
+
+| 方法 | 問題数 | 内容 |
+|---|---|---|
+| 出力比較 | 93問 | `src/data/knockTests.ts` の入力(計237ケース)で提出コードと模範解答を実行して比較 |
+| 性質チェック | 6問 | `src/data/knockChecks.ts`。乱数(96-99)や自由記述(2,3)は出力比較できないので、出力が満たすべき性質を検証 |
+| 自動採点しない | 1問 | No.39 のみ。模範解答が何も出力しない問題のため、出力から正誤を区別できない |
+
+- テスト入力は全ケース、ローカルのgccで模範解答を実行して異常終了・タイムアウトが無いことを検証済み。
+- **出力形式の補足**(`src/data/knockOutputSpecs.ts`): 問題文に書かれていない文字列を模範解答が出力する問題(例: No.90 は問題文が「春」なのに模範解答は `spring`)は、そのままだと正しい解答が不正解になる。採点に合わせるべき形式を画面に表示して回避している。**元教材の問題文は変更していない。**
 
 ## Judge Engine
 
@@ -130,10 +184,18 @@ WebGPUが使えない/モデル読み込み失敗時:
 - 言語追加はRunner差し替えのみ(`registerRunner`)
 - 未対応言語(TypeScript / SQL / HTML/CSS/JS)はセレクタに「準備中」表示
 
-## 未実装・要確認事項
+## 既知の制限・未実装
 
-- **C実行**: 実装・検証済み(Nodeでコンパイル/実行/CEを実測)。実ブラウザでの初回clang DL(数十MB)は環境依存で時間がかかる点に留意。
-- HTML/CSS/JSのiframeプレビュー(MVP対象外、未着手)
-- 教材ソースアップロードUI(Phase 2。ストアと型・生成関数の口は用意済み)
-- 軽量モデル(Llama 3.2 1B)はJSON出力の安定性に限界があるため、生成に3回失敗することがある。その場合は条件(単元・難易度)を変えて再試行してください。より安定させたい場合は `webllmClient.ts` の `PRIMARY_MODEL_ID` を `Qwen2.5-1.5B-Instruct-q4f16_1-MLC` などに変更。
-- レビュー用 `reviews` ストアは確保済みだが、現状レビューは `submissions` 内に埋め込み保存している(将来レビュー再生成機能を作るときに分離予定)。
+### 原理的な制限
+- **No.39 は自動採点できない**。模範解答が何も出力しない問題のため、出力からは正誤を区別できない(何もしないプログラムも通ってしまう)。画面に理由を明示している。
+- **小型モデル(1.5B)の限界**: 問題生成は最大5回リトライしても失敗することがある。その場合は条件(単元・難易度)を変えて再試行する。AIレビューの精度もモデル依存。
+- **Firefoxでは C 実行が使えない**(COEP credentialless 非対応)。他の機能は動く。
+
+### 未実装
+- 生成済み問題の一覧・再選択UI(AI生成モード。実行せずに終わった問題に戻る導線が無い)
+- 教材ソースのアップロードUI(`sources` / `sourceChunks` ストアと型、`generateProblem` の `sourceContext` 引数まで用意済み)
+- TypeScript / SQL / HTML+CSS+JS(セレクタに「準備中」と表示のみ)。SQLとHTMLは標準入出力の比較で採点できないため、判定方式から作り直しが必要
+- `reviews` ストアは確保済みだが未使用。レビューは `submissions` 内に埋め込み保存している(レビュー再生成機能を作るときに分離予定)
+
+### テスト
+`npm test` は判定ロジック(`compareOutput`)・性質チェック・教材データの整合性を検証する。UIコンポーネントとブラウザ依存の処理(Runner / WebLLM)はテスト対象外で、ブラウザでの手動確認に頼っている。
