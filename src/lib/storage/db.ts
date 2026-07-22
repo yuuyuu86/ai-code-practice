@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Problem, Source, SourceChunk } from "@/types/problem";
-import type { Submission } from "@/types/submission";
+import type { KnockSubmission, Submission } from "@/types/submission";
 
 interface AppDB extends DBSchema {
   /** 生成された問題(現在セッション向け) */
@@ -18,6 +18,12 @@ interface AppDB extends DBSchema {
   submissions: {
     key: string;
     value: Submission;
+    indexes: { "by-createdAt": string };
+  };
+  /** 教材モード(100本ノック)の提出履歴。合否判定が無いのでsubmissionsとは別ストア */
+  knockSubmissions: {
+    key: string;
+    value: KnockSubmission;
     indexes: { "by-createdAt": string };
   };
   codeDrafts: {
@@ -45,30 +51,39 @@ interface AppDB extends DBSchema {
 }
 
 const DB_NAME = "ai-code-practice";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<AppDB>> | null = null;
 
 export function getDB(): Promise<IDBPDatabase<AppDB>> {
   if (!dbPromise) {
     dbPromise = openDB<AppDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        const problems = db.createObjectStore("generatedProblems", { keyPath: "id" });
-        problems.createIndex("by-createdAt", "createdAt");
+      // バージョンごとに差分だけ適用する。既存ユーザー(oldVersion=1)で
+      // v1のストアを作り直そうとすると "store already exists" で失敗するため、
+      // 必ず oldVersion で分岐すること。
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const problems = db.createObjectStore("generatedProblems", { keyPath: "id" });
+          problems.createIndex("by-createdAt", "createdAt");
 
-        const cached = db.createObjectStore("cachedAIProblems", { keyPath: "id" });
-        cached.createIndex("by-cacheKey", "cacheKey");
+          const cached = db.createObjectStore("cachedAIProblems", { keyPath: "id" });
+          cached.createIndex("by-cacheKey", "cacheKey");
 
-        const subs = db.createObjectStore("submissions", { keyPath: "id" });
-        subs.createIndex("by-createdAt", "createdAt");
+          const subs = db.createObjectStore("submissions", { keyPath: "id" });
+          subs.createIndex("by-createdAt", "createdAt");
 
-        db.createObjectStore("codeDrafts", { keyPath: "key" });
-        db.createObjectStore("reviews", { keyPath: "submissionId" });
-        db.createObjectStore("settings", { keyPath: "key" });
+          db.createObjectStore("codeDrafts", { keyPath: "key" });
+          db.createObjectStore("reviews", { keyPath: "submissionId" });
+          db.createObjectStore("settings", { keyPath: "key" });
 
-        db.createObjectStore("sources", { keyPath: "id" });
-        const chunks = db.createObjectStore("sourceChunks", { keyPath: "id" });
-        chunks.createIndex("by-sourceId", "sourceId");
+          db.createObjectStore("sources", { keyPath: "id" });
+          const chunks = db.createObjectStore("sourceChunks", { keyPath: "id" });
+          chunks.createIndex("by-sourceId", "sourceId");
+        }
+        if (oldVersion < 2) {
+          const knockSubs = db.createObjectStore("knockSubmissions", { keyPath: "id" });
+          knockSubs.createIndex("by-createdAt", "createdAt");
+        }
       },
     });
   }

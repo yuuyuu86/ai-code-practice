@@ -7,7 +7,16 @@ const ITEMS: Array<{ key: keyof Pick<Review, "result" | "cause" | "direction" | 
   { key: "nextStep", label: "次の一手" },
 ];
 
-export default function ReviewPanel({ review, loading }: { review: Review | null; loading: boolean }) {
+export default function ReviewPanel({
+  review,
+  loading,
+  loadingLabel,
+}: {
+  review: Review | null;
+  loading: boolean;
+  /** モデル読み込み中など、待ち時間の内訳を出したいときに使う */
+  loadingLabel?: string | null;
+}) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-center gap-2">
@@ -23,7 +32,7 @@ export default function ReviewPanel({ review, loading }: { review: Review | null
       {loading && (
         <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-          AIがレビューを書いています…
+          {loadingLabel ?? "AIがレビューを書いています…"}
         </div>
       )}
 

@@ -6,7 +6,7 @@ import { buildReviewPrompt, parseDelimitedReview } from "./prompts";
 import { STATUS_DESCRIPTIONS } from "@/lib/judge/status";
 
 /** 行コメント・ブロックコメント・空白を除いて、コードに実質的な中身があるか判定する */
-function isCodeEffectivelyEmpty(code: string, language: Language): boolean {
+export function isCodeEffectivelyEmpty(code: string, language: Language): boolean {
   let stripped = code.replace(/\/\*[\s\S]*?\*\//g, ""); // C/JSのブロックコメント
   const lineComment = language === "python" ? "#" : "//";
   stripped = stripped
@@ -127,7 +127,7 @@ function buildMachineReview(judgeResult: JudgeResult): Review {
  * 学習目的で答えのコードは見せない方針。```で囲まれた部分と、
  * それに続く連続したコード行(=で代入している等)をまとめて除去する。
  */
-function stripCodeBlocks(text: string): string {
+export function stripCodeBlocks(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, "") // 閉じたコードフェンス
     .replace(/```[\s\S]*$/g, "") // 閉じ忘れフェンス以降
