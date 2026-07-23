@@ -1,6 +1,6 @@
 "use client";
 
-import { LuSparkles, LuArrowRight } from "react-icons/lu";
+import { LuSparkles, LuArrowRight, LuBookOpen } from "react-icons/lu";
 import type { Problem } from "@/types/problem";
 import HintBox from "./HintBox";
 
@@ -21,7 +21,20 @@ function CodeBlock({ text }: { text: string }) {
   );
 }
 
-export default function ProblemCard({ problem, fromCache }: { problem: Problem; fromCache: boolean }) {
+export default function ProblemCard({
+  problem,
+  fromCache,
+  usedSource = false,
+}: {
+  problem: Problem;
+  fromCache: boolean;
+  usedSource?: boolean;
+}) {
+  // HTML問題は標準入出力が無く、制約の代わりに「確認する項目」を持つので見出しを変える
+  const isHtml = problem.supportedLanguages.includes("html");
+  const inputLabel = isHtml ? "書き方" : "入力形式";
+  const outputLabel = isHtml ? "採点方法" : "出力形式";
+  const constraintsLabel = isHtml ? "確認する項目" : "制約";
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       {/* バッジ。配色は AI生成バッジ(アクセント)以外は中立トーンに統一 */}
@@ -36,6 +49,12 @@ export default function ProblemCard({ problem, fromCache }: { problem: Problem; 
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
           {problem.topic}
         </span>
+        {usedSource && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+            <LuBookOpen className="h-3 w-3" />
+            教材を参考
+          </span>
+        )}
       </div>
 
       <h2 className="mt-2.5 text-base font-bold text-slate-800">{problem.title}</h2>
@@ -43,15 +62,15 @@ export default function ProblemCard({ problem, fromCache }: { problem: Problem; 
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{problem.statement}</p>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <Section title="入力形式">
+        <Section title={inputLabel}>
           <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{problem.inputFormat}</p>
         </Section>
-        <Section title="出力形式">
+        <Section title={outputLabel}>
           <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{problem.outputFormat}</p>
         </Section>
       </div>
 
-      <Section title="制約">
+      <Section title={constraintsLabel}>
         <ul className="space-y-0.5 text-xs text-slate-600">
           {problem.constraints.map((c, i) => (
             <li key={i} className="flex gap-1.5">

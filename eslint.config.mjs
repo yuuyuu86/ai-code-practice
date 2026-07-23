@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 配布物をそのまま置いているだけのファイル。自分で直せないのでlintしない。
+    "public/sqljs/**",
+    "public/coi-serviceworker.js",
   ]),
 ]);
 

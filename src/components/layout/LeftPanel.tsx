@@ -5,6 +5,7 @@ import ProblemControls from "@/components/problem/ProblemControls";
 import ProblemCard from "@/components/problem/ProblemCard";
 import GenerationProgress, { type GenerationView } from "@/components/problem/GenerationProgress";
 import GeneratedProblemList from "@/components/problem/GeneratedProblemList";
+import SourceManager from "@/components/source/SourceManager";
 
 type Props = {
   language: Language;
@@ -22,6 +23,8 @@ type Props = {
   onGenerate: () => void;
   onSelectGenerated: (p: Problem) => void;
   onDeleteGenerated: (p: Problem) => void;
+  onSourceCountChange: (count: number) => void;
+  usedSource: boolean;
 };
 
 export default function LeftPanel(props: Props) {
@@ -37,6 +40,8 @@ export default function LeftPanel(props: Props) {
         onTopicChange={props.onTopicChange}
         onGenerate={props.onGenerate}
       />
+
+      <SourceManager onChange={props.onSourceCountChange} />
 
       {props.generating && props.genView && <GenerationProgress view={props.genView} />}
 
@@ -56,7 +61,7 @@ export default function LeftPanel(props: Props) {
       )}
 
       {props.problem ? (
-        <ProblemCard problem={props.problem} fromCache={props.fromCache} />
+        <ProblemCard problem={props.problem} fromCache={props.fromCache} usedSource={props.usedSource} />
       ) : (
         !props.generating &&
         !props.generateError && (

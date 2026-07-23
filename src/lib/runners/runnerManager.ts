@@ -4,6 +4,8 @@ import { javascriptRunner } from "./javascriptRunner";
 import { pythonRunner } from "./pythonRunner";
 import { cRunner } from "./cRunner";
 import { typescriptRunner } from "./typescriptRunner";
+import { sqlRunner } from "./sqlRunner";
+import { htmlRunner } from "./htmlRunner";
 
 /**
  * 言語 → Runner の対応表。
@@ -12,6 +14,8 @@ import { typescriptRunner } from "./typescriptRunner";
 const runners: Record<string, LanguageRunner> = {
   javascript: javascriptRunner,
   typescript: typescriptRunner,
+  sql: sqlRunner,
+  html: htmlRunner,
   python: pythonRunner,
   c: cRunner,
 };
