@@ -86,4 +86,19 @@ export const COMPLETION_SNIPPETS: Record<Language, CompletionSnippet[]> = {
     { label: "COUNT", insertText: "COUNT(${1:*})", detail: "件数", isSnippet: true },
     { label: "SUM", insertText: "SUM(${1:column})", detail: "合計", isSnippet: true },
   ],
+  html: [
+    { label: "h1", insertText: "<h1>${1}</h1>", detail: "大見出し", isSnippet: true },
+    { label: "p", insertText: "<p>${1}</p>", detail: "段落", isSnippet: true },
+    { label: "ul", insertText: "<ul>\n  <li>${1}</li>\n</ul>", detail: "箇条書き", isSnippet: true },
+    { label: "img", insertText: '<img src="${1}" alt="${2}">', detail: "画像", isSnippet: true },
+    { label: "a", insertText: '<a href="${1}">${2}</a>', detail: "リンク", isSnippet: true },
+    { label: "style", insertText: "<style>\n  ${1}\n</style>", detail: "CSSを書く場所", isSnippet: true },
+    { label: "script", insertText: "<script>\n  ${1}\n</script>", detail: "JavaScriptを書く場所", isSnippet: true },
+    {
+      label: "querySelector",
+      insertText: 'document.querySelector("${1}")',
+      detail: "要素を取り出す",
+      isSnippet: true,
+    },
+  ],
 };

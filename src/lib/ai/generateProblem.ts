@@ -12,6 +12,7 @@ import { findForbiddenPattern, findNonJapaneseReason, validateProblemStructure }
 import { buildTests } from "@/lib/problem/buildTests";
 import { cacheAIProblem, findCachedProblem, saveGeneratedProblem } from "@/lib/storage/problems";
 import { generateSqlProblem } from "./generateSqlProblem";
+import { generateHtmlProblem } from "./generateHtmlProblem";
 
 const MAX_ATTEMPTS = 5;
 const MAX_OUTLINE_ATTEMPTS = 2;
@@ -50,6 +51,16 @@ export async function generateProblem(
     return fallbackToCache(
       input,
       `SQL問題の生成に失敗しました。条件を変えてもう一度試してください。\n\n(最後の失敗理由: ${sqlResult.failureReason})`,
+    );
+  }
+
+  // HTMLは出力が無く、描画したページのDOMを調べて採点するので、これも別経路にする
+  if (input.language === "html") {
+    const htmlResult = await generateHtmlProblem(input, onProgress);
+    if (htmlResult.ok) return { ok: true, problem: htmlResult.problem, fromCache: false };
+    return fallbackToCache(
+      input,
+      `HTML問題の生成に失敗しました。条件を変えてもう一度試してください。\n\n(最後の失敗理由: ${htmlResult.failureReason})`,
     );
   }
 

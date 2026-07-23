@@ -30,6 +30,11 @@ export default function ProblemCard({
   fromCache: boolean;
   usedSource?: boolean;
 }) {
+  // HTML問題は標準入出力が無く、制約の代わりに「確認する項目」を持つので見出しを変える
+  const isHtml = problem.supportedLanguages.includes("html");
+  const inputLabel = isHtml ? "書き方" : "入力形式";
+  const outputLabel = isHtml ? "採点方法" : "出力形式";
+  const constraintsLabel = isHtml ? "確認する項目" : "制約";
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       {/* バッジ。配色は AI生成バッジ(アクセント)以外は中立トーンに統一 */}
@@ -57,15 +62,15 @@ export default function ProblemCard({
       <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{problem.statement}</p>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <Section title="入力形式">
+        <Section title={inputLabel}>
           <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{problem.inputFormat}</p>
         </Section>
-        <Section title="出力形式">
+        <Section title={outputLabel}>
           <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600">{problem.outputFormat}</p>
         </Section>
       </div>
 
-      <Section title="制約">
+      <Section title={constraintsLabel}>
         <ul className="space-y-0.5 text-xs text-slate-600">
           {problem.constraints.map((c, i) => (
             <li key={i} className="flex gap-1.5">

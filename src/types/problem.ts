@@ -1,4 +1,4 @@
-export type Language = "c" | "python" | "javascript" | "typescript" | "sql";
+export type Language = "c" | "python" | "javascript" | "typescript" | "sql" | "html";
 
 export type Difficulty = "入門" | "初級" | "中級" | "上級";
 
