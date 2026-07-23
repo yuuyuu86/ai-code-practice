@@ -49,6 +49,20 @@ export default function KnockPanel(props: Props) {
           <LuShuffle className="h-3.5 w-3.5" />
           ランダムに出題
         </button>
+
+        {/* 他人の教材をそのまま載せているので、誰の教材かを画面上でも示す */}
+        <p className="mt-2.5 border-t border-slate-100 pt-2 text-[10px] leading-relaxed text-slate-400">
+          出題している100問は{" "}
+          <a
+            href="https://marugotoyusuke.github.io/Knock100/"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline hover:text-slate-600"
+          >
+            基礎プロ100本ノック
+          </a>{" "}
+          (marugotoyusuke 氏)の教材を、作者の許諾を得て原文のまま収録したものです。著作権は作者に帰属します。
+        </p>
       </div>
 
       {/* 選択中の問題 */}
