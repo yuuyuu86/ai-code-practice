@@ -1,6 +1,6 @@
 "use client";
 
-import { LuSparkles, LuArrowRight } from "react-icons/lu";
+import { LuSparkles, LuArrowRight, LuBookOpen } from "react-icons/lu";
 import type { Problem } from "@/types/problem";
 import HintBox from "./HintBox";
 
@@ -21,7 +21,15 @@ function CodeBlock({ text }: { text: string }) {
   );
 }
 
-export default function ProblemCard({ problem, fromCache }: { problem: Problem; fromCache: boolean }) {
+export default function ProblemCard({
+  problem,
+  fromCache,
+  usedSource = false,
+}: {
+  problem: Problem;
+  fromCache: boolean;
+  usedSource?: boolean;
+}) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       {/* バッジ。配色は AI生成バッジ(アクセント)以外は中立トーンに統一 */}
@@ -36,6 +44,12 @@ export default function ProblemCard({ problem, fromCache }: { problem: Problem; 
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
           {problem.topic}
         </span>
+        {usedSource && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+            <LuBookOpen className="h-3 w-3" />
+            教材を参考
+          </span>
+        )}
       </div>
 
       <h2 className="mt-2.5 text-base font-bold text-slate-800">{problem.title}</h2>

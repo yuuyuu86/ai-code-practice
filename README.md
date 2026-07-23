@@ -115,6 +115,14 @@ WebGPUが使えない/モデル読み込み失敗時:
 2. あればそれを出題(「AI生成(キャッシュ)」ラベル付き)
 3. なければ「この端末ではAI問題生成をまだ利用できません…」と表示
 
+## 教材ソース(AI生成モード)
+
+左パネルの「教材」から、授業資料を登録できます(`.txt` / `.md` / `.pdf`、または本文の貼り付け)。PDFはpdf.jsで本文だけ抜き出します(スキャン画像のPDFは対象外)。
+
+登録した教材は見出し・段落を手がかりに約700文字ごとのチャンクに分割し、キーワードから単元タグをつけて `sourceChunks` に保存します。問題生成時は**選んだ単元に合うチャンクだけ**を最大1,400文字まで集めてプロンプトに渡します(`buildSourceContext`)。合うチャンクが無ければ教材を使いません — 無関係な抜粋を渡すと問題の質が落ちるためです。
+
+教材の文章をそのまま出題しないようプロンプトで指示しています。保存先は端末内のIndexedDBのみで、外部には送りません。
+
 ## Runner
 
 共通インターフェース `LanguageRunner`(`src/lib/runners/types.ts`)。言語追加は Runner実装 + `runnerManager` に1行 + `languages.ts` + 補完スニペット追加のみ。
@@ -174,13 +182,13 @@ WebGPUが使えない/モデル読み込み失敗時:
 
 ## 保存(IndexedDB / ログイン不要)
 
-ストア: `generatedProblems` / `cachedAIProblems` / `submissions` / `knockSubmissions` / `codeDrafts` / `settings` / `sources` / `sourceChunks`(最後の2つはPhase 2教材ソース用に確保済み、UI未実装)。
+ストア: `generatedProblems` / `cachedAIProblems` / `submissions` / `knockSubmissions` / `codeDrafts` / `settings` / `sources` / `sourceChunks`。
 
 履歴クリックで過去のコード・結果・レビュー・問題を復元できます。コードは問題×言語ごとに自動下書き保存(800msデバウンス)。
 
 ## 将来拡張への備え(実装済みの設計)
 
-- `generateProblem` は `sourceContext?: string` を受け取れる(教材ソース対応の土台)
+- `generateProblem` は `sourceContext?: string` を受け取れる(教材ソースのアップロードUIから供給)
 - Problem JSONに `sourceRefs` / `learningObjectives` を持てる
 - 言語追加はRunner差し替えのみ(`registerRunner`)
 - 未対応言語(SQL / HTML/CSS/JS)はセレクタに「準備中」表示
@@ -193,7 +201,6 @@ WebGPUが使えない/モデル読み込み失敗時:
 - **Firefoxでは C 実行が使えない**(COEP credentialless 非対応)。他の機能は動く。
 
 ### 未実装
-- 教材ソースのアップロードUI(`sources` / `sourceChunks` ストアと型、`generateProblem` の `sourceContext` 引数まで用意済み)
 - SQL / HTML+CSS+JS(セレクタに「準備中」と表示のみ)。標準入出力の比較で採点できないため、判定方式から作り直しが必要
 
 ### テスト

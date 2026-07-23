@@ -16,6 +16,7 @@ import {
 } from "@/lib/storage/problems";
 import { clearSubmissions, deleteSubmission, listSubmissions, saveSubmission } from "@/lib/storage/submissions";
 import { getSetting, setSetting } from "@/lib/storage/settings";
+import { buildSourceContext } from "@/lib/storage/sources";
 import { useKnockMode } from "@/lib/knock/useKnockMode";
 import type { GenerationView } from "@/components/problem/GenerationProgress";
 import RunResult from "@/components/result/RunResult";
@@ -52,6 +53,8 @@ export default function AppShell() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [generatedProblems, setGeneratedProblems] = useState<Problem[]>([]);
+  const [sourceCount, setSourceCount] = useState(0);
+  const [usedSource, setUsedSource] = useState(false);
 
   const draftTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -121,7 +124,11 @@ export default function AppShell() {
     setSelectedSubmissionId(null);
 
     try {
-      const result = await generateProblem({ language, difficulty, topic }, (p) => {
+      // 教材が入っていれば、選んだ単元に近い部分だけを参考として渡す
+      const sourceContext = sourceCount > 0 ? await buildSourceContext(topic) : null;
+      setUsedSource(sourceContext !== null);
+
+      const result = await generateProblem({ language, difficulty, topic, sourceContext: sourceContext ?? undefined }, (p) => {
         if (p.phase === "loading-model") {
           setGenView((prev) => ({
             phase: "loading-model",
@@ -149,7 +156,7 @@ export default function AppShell() {
       setGenerating(false);
       setGenView(null);
     }
-  }, [language, difficulty, topic]);
+  }, [language, difficulty, topic, sourceCount]);
 
   const handleRun = useCallback(async () => {
     if (!problem || running) return;
@@ -322,6 +329,8 @@ export default function AppShell() {
               onDifficultyChange={setDifficulty}
               onTopicChange={setTopic}
               onGenerate={handleGenerate}
+              onSourceCountChange={setSourceCount}
+              usedSource={usedSource}
               onSelectGenerated={handleSelectGenerated}
               onDeleteGenerated={handleDeleteGenerated}
             />
