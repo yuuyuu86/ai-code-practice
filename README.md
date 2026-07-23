@@ -15,7 +15,7 @@
 | | AI生成モード | 教材モード(100本ノック) |
 |---|---|---|
 | 問題 | WebLLMがその場で生成 | 担当教員の教材100問(C言語) |
-| 言語 | C / Python / JavaScript / TypeScript | C のみ |
+| 言語 | C / Python / JavaScript / TypeScript / SQL | C のみ |
 | 入力 | 生成されたテストケース | 標準入力欄に自分で入力(試し実行用) |
 | 採点 | Judge Engine (AC/WA/CE/RE/TLE/OLE) | 全テストケースで合否判定 |
 | レビュー | AI(結果/原因/直す方向/次の一手) | 同左 |
@@ -133,6 +133,7 @@ WebGPUが使えない/モデル読み込み失敗時:
 | TypeScript | Monaco同梱のTSコンパイラで型チェック→JSに変換し、JavaScript Runnerで実行 | JavaScriptと同じ | JavaScriptと同じ |
 | Python | Pyodide 0.26.4(CDN、Worker内) | `input()` を差し替え | `sys.stdout` 差し替え |
 | C | Wasmer JS SDK 0.10.0 + `clang/clang` パッケージ(実装・検証済み) | WASI stdin | WASI stdout/stderr |
+| SQL | SQLite(sql.js / WASM、Worker内) | 標準入力は無い。テーブル定義とデータ投入SQLを渡す | SELECT結果のタブ区切り(1行目が列名) |
 
 共通制限: タイムアウト2秒 / 出力10,000文字(OLE) / 入力10KB。
 
@@ -180,6 +181,18 @@ WebGPUが使えない/モデル読み込み失敗時:
 1. **機械レビュー**: 判定結果・落ちたケース・期待/実際の出力・エラー内容(常に生成可能)
 2. **AIレビュー**: WebLLMで「結果 / 原因 / 直す方向 / 次の一手」の4項目固定。AI失敗時は機械レビューにフォールバック。
 
+## SQL問題の採点
+
+SQLは標準入出力が無いので、採点の形が他言語と違います。
+
+- **テストケース = データセット**。`tests[i].input` にテーブル定義とデータ投入SQLが入り、テストごとに違うデータを入れます。データが1種類だと結果を直接書いたSELECTでも通ってしまうため、3件以上を必須にしています。
+- **答え = SELECTの結果**。1行目が列名、2行目以降が値のタブ区切りテキストになり、既存の出力比較にそのまま乗ります。
+- **ORDER BY必須**。SQLiteはORDER BYが無いと行の順序を保証しないので、模範解答にORDER BYが無い問題は生成時に弾きます。
+- 結果セットの読み出しには `exec()` ではなく `prepare()` を使います。`exec()` は「0行のSELECT」と「SELECTでない文」をどちらも空配列で返すため、1件も該当しないデータのときINSERTしか書いていない答えまで正解になってしまいます。
+- 期待する出力はAIに書かせず、模範解答のSELECTをsql.jsで実行して作ります(他言語のPyodideと同じ方針)。全データで同じ結果になる問題も弾きます。
+
+SQL問題は `supportedLanguages: ["sql"]` を持ち、他の言語を選んだ状態では実行できません(逆も同じ)。
+
 ## 保存(IndexedDB / ログイン不要)
 
 ストア: `generatedProblems` / `cachedAIProblems` / `submissions` / `knockSubmissions` / `codeDrafts` / `settings` / `sources` / `sourceChunks`。
@@ -191,7 +204,7 @@ WebGPUが使えない/モデル読み込み失敗時:
 - `generateProblem` は `sourceContext?: string` を受け取れる(教材ソースのアップロードUIから供給)
 - Problem JSONに `sourceRefs` / `learningObjectives` を持てる
 - 言語追加はRunner差し替えのみ(`registerRunner`)
-- 未対応言語(SQL / HTML/CSS/JS)はセレクタに「準備中」表示
+- 未対応言語(HTML/CSS/JS)はセレクタに「準備中」表示
 
 ## 既知の制限・未実装
 
@@ -201,7 +214,7 @@ WebGPUが使えない/モデル読み込み失敗時:
 - **Firefoxでは C 実行が使えない**(COEP credentialless 非対応)。他の機能は動く。
 
 ### 未実装
-- SQL / HTML+CSS+JS(セレクタに「準備中」と表示のみ)。標準入出力の比較で採点できないため、判定方式から作り直しが必要
+- HTML+CSS+JS(セレクタに「準備中」と表示のみ)。標準入出力の比較で採点できないため、判定方式から作り直しが必要
 
 ### テスト
 `npm test` は判定ロジック(`compareOutput`)・性質チェック・教材データの整合性を検証する。UIコンポーネントとブラウザ依存の処理(Runner / WebLLM)はテスト対象外で、ブラウザでの手動確認に頼っている。

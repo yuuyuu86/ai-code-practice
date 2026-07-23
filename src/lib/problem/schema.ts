@@ -85,6 +85,11 @@ const HEADER_ALIASES: Array<[RegExp, string]> = [
   [/SAMPLE[_\s]*OUTPUT|出力例|サンプル出力/i, "SAMPLE_OUTPUT"],
   [/TEST[_\s]*INPUTS?|TESTS?|テスト入力|テストケース/i, "TEST_INPUTS"],
   [/INPUTS|入力一覧|入力群/i, "INPUTS"],
+  // SQL問題用。SQLはSOLUTION等の汎用別名より先に置く必要はないが、
+  // SCHEMA/SETUPSはSQL問題にしか出てこないので衝突しない。
+  [/SCHEMA|テーブル定義|スキーマ/i, "SCHEMA"],
+  [/SETUPS?|SETUP[_\s]*SQL|データ|セットアップ/i, "SETUPS"],
+  [/SQL|クエリ/i, "SQL"],
   [/PYTHON|SOLUTION|CODE|模範解答|解答/i, "PYTHON"],
   [/HINTS?|ヒント/i, "HINTS"],
   [/EXPLANATION|解説|説明/i, "EXPLANATION"],

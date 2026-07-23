@@ -7,7 +7,7 @@ import type { Review, Submission } from "@/types/submission";
 import { generateProblem } from "@/lib/ai/generateProblem";
 import { generateReview } from "@/lib/ai/generateReview";
 import { judge } from "@/lib/judge/judge";
-import { getLanguageConfig } from "@/lib/languages";
+import { getLanguageConfig, topicsFor } from "@/lib/languages";
 import { getDraft, saveDraft } from "@/lib/storage/drafts";
 import {
   deleteGeneratedProblem,
@@ -93,6 +93,9 @@ export default function AppShell() {
   const handleLanguageChange = useCallback(
     async (next: Language) => {
       setLanguage(next);
+      // SQLと他言語では選べる単元が違う。前の単元が無い場合は先頭に寄せる。
+      const topics = topicsFor(next);
+      if (!topics.includes(topic)) setTopic(topics[0]);
       if (problem) {
         const draft = await getDraft(problem.id, next);
         setCode(draft ?? getLanguageConfig(next).template);
@@ -100,7 +103,7 @@ export default function AppShell() {
         setCode(getLanguageConfig(next).template);
       }
     },
-    [problem],
+    [problem, topic],
   );
 
   const handleCodeChange = useCallback(
@@ -284,6 +287,10 @@ export default function AppShell() {
 
   const isKnock = mode === "knock";
 
+  // SQL問題はテーブルとSELECT結果で採点するので、他の言語では解けない(逆も同じ)。
+  // 言語を切り替えたまま実行すると意味の無い判定になるため、実行させない。
+  const languageMatchesProblem = problem === null || problem.supportedLanguages.includes(language);
+
   // モードごとの模範解答。教材はC言語の解答をそのまま持っている。
   const aiAnswer: AnswerView | null = problem
     ? {
@@ -368,11 +375,15 @@ export default function AppShell() {
             code={code}
             running={running}
             runLabel={runLabel}
-            canRun={problem !== null}
+            canRun={problem !== null && languageMatchesProblem}
             answer={aiAnswer}
             stdin={null}
             answerResetKey={`${problem?.id ?? "none"}:${language}`}
-            emptyHint="まず問題を生成してください"
+            emptyHint={
+              problem !== null && !languageMatchesProblem
+                ? `この問題は${problem.supportedLanguages.map((l) => getLanguageConfig(l).label).join("・")}で解く問題です。言語を戻してください`
+                : "まず問題を生成してください"
+            }
             hasResults={judgeResult !== null || review !== null || reviewLoading}
             resultNode={
               <>

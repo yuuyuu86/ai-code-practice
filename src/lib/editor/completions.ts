@@ -77,4 +77,13 @@ export const COMPLETION_SNIPPETS: Record<Language, CompletionSnippet[]> = {
       isSnippet: true,
     },
   ],
+  sql: [
+    { label: "SELECT", insertText: "SELECT ${1:*} FROM ${2:table}", detail: "取り出す", isSnippet: true },
+    { label: "WHERE", insertText: "WHERE ${1:column} = ${2:value}", detail: "条件で絞る", isSnippet: true },
+    { label: "ORDER BY", insertText: "ORDER BY ${1:column} ${2:ASC}", detail: "並べ替え(採点に必須)", isSnippet: true },
+    { label: "GROUP BY", insertText: "GROUP BY ${1:column}", detail: "グループ化", isSnippet: true },
+    { label: "JOIN", insertText: "JOIN ${1:table} ON ${2:a} = ${3:b}", detail: "テーブル結合", isSnippet: true },
+    { label: "COUNT", insertText: "COUNT(${1:*})", detail: "件数", isSnippet: true },
+    { label: "SUM", insertText: "SUM(${1:column})", detail: "合計", isSnippet: true },
+  ],
 };

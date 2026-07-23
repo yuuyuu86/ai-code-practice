@@ -11,6 +11,7 @@ import {
 import { findForbiddenPattern, findNonJapaneseReason, validateProblemStructure } from "@/lib/problem/validateProblem";
 import { buildTests } from "@/lib/problem/buildTests";
 import { cacheAIProblem, findCachedProblem, saveGeneratedProblem } from "@/lib/storage/problems";
+import { generateSqlProblem } from "./generateSqlProblem";
 
 const MAX_ATTEMPTS = 5;
 const MAX_OUTLINE_ATTEMPTS = 2;
@@ -40,6 +41,16 @@ export async function generateProblem(
 ): Promise<GenerateResult> {
   if (!isWebGPUAvailable()) {
     return fallbackToCache(input, "このブラウザではWebGPUが使えないため、AI問題生成を利用できません。");
+  }
+
+  // SQLは標準入出力ではなくテーブルとSELECT結果で採点するので、生成も別経路にする
+  if (input.language === "sql") {
+    const sqlResult = await generateSqlProblem(input, onProgress);
+    if (sqlResult.ok) return { ok: true, problem: sqlResult.problem, fromCache: false };
+    return fallbackToCache(
+      input,
+      `SQL問題の生成に失敗しました。条件を変えてもう一度試してください。\n\n(最後の失敗理由: ${sqlResult.failureReason})`,
+    );
   }
 
   let failureReason: string | undefined;

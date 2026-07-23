@@ -8,6 +8,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
   python: "Python",
   javascript: "JavaScript",
   typescript: "TypeScript",
+  sql: "SQL",
 };
 
 const DIFFICULTY_REQUIREMENTS: Record<string, string[]> = {

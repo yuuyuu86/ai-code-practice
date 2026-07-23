@@ -1,7 +1,7 @@
 "use client";
 
 import type { Difficulty, Language } from "@/types/problem";
-import { COMING_SOON_LANGUAGES, DIFFICULTIES, LANGUAGES, TOPICS } from "@/lib/languages";
+import { COMING_SOON_LANGUAGES, DIFFICULTIES, LANGUAGES, topicsFor } from "@/lib/languages";
 
 type Props = {
   language: Language;
@@ -58,7 +58,7 @@ export default function ProblemControls(props: Props) {
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-500">単元</span>
             <select className={selectClass} value={props.topic} onChange={(e) => props.onTopicChange(e.target.value)}>
-              {TOPICS.map((t) => (
+              {topicsFor(props.language).map((t) => (
                 <option key={t}>{t}</option>
               ))}
             </select>
