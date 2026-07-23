@@ -15,7 +15,7 @@
 | | AI生成モード | 教材モード(100本ノック) |
 |---|---|---|
 | 問題 | WebLLMがその場で生成 | 担当教員の教材100問(C言語) |
-| 言語 | C / Python / JavaScript | C のみ |
+| 言語 | C / Python / JavaScript / TypeScript | C のみ |
 | 入力 | 生成されたテストケース | 標準入力欄に自分で入力(試し実行用) |
 | 採点 | Judge Engine (AC/WA/CE/RE/TLE/OLE) | 全テストケースで合否判定 |
 | レビュー | AI(結果/原因/直す方向/次の一手) | 同左 |
@@ -122,6 +122,7 @@ WebGPUが使えない/モデル読み込み失敗時:
 | 言語 | 方式 | stdin | stdout |
 |---|---|---|---|
 | JavaScript | Web Worker(無限ループでもUIが固まらない) | グローバル `input` / `readLine()` | `console.log` フック |
+| TypeScript | Monaco同梱のTSコンパイラで型チェック→JSに変換し、JavaScript Runnerで実行 | JavaScriptと同じ | JavaScriptと同じ |
 | Python | Pyodide 0.26.4(CDN、Worker内) | `input()` を差し替え | `sys.stdout` 差し替え |
 | C | Wasmer JS SDK 0.10.0 + `clang/clang` パッケージ(実装・検証済み) | WASI stdin | WASI stdout/stderr |
 
@@ -173,7 +174,7 @@ WebGPUが使えない/モデル読み込み失敗時:
 
 ## 保存(IndexedDB / ログイン不要)
 
-ストア: `generatedProblems` / `cachedAIProblems` / `submissions` / `codeDrafts` / `reviews` / `settings` / `sources` / `sourceChunks`(最後の2つはPhase 2教材ソース用に確保済み、UI未実装)。
+ストア: `generatedProblems` / `cachedAIProblems` / `submissions` / `knockSubmissions` / `codeDrafts` / `settings` / `sources` / `sourceChunks`(最後の2つはPhase 2教材ソース用に確保済み、UI未実装)。
 
 履歴クリックで過去のコード・結果・レビュー・問題を復元できます。コードは問題×言語ごとに自動下書き保存(800msデバウンス)。
 
@@ -182,7 +183,7 @@ WebGPUが使えない/モデル読み込み失敗時:
 - `generateProblem` は `sourceContext?: string` を受け取れる(教材ソース対応の土台)
 - Problem JSONに `sourceRefs` / `learningObjectives` を持てる
 - 言語追加はRunner差し替えのみ(`registerRunner`)
-- 未対応言語(TypeScript / SQL / HTML/CSS/JS)はセレクタに「準備中」表示
+- 未対応言語(SQL / HTML/CSS/JS)はセレクタに「準備中」表示
 
 ## 既知の制限・未実装
 
@@ -192,10 +193,8 @@ WebGPUが使えない/モデル読み込み失敗時:
 - **Firefoxでは C 実行が使えない**(COEP credentialless 非対応)。他の機能は動く。
 
 ### 未実装
-- 生成済み問題の一覧・再選択UI(AI生成モード。実行せずに終わった問題に戻る導線が無い)
 - 教材ソースのアップロードUI(`sources` / `sourceChunks` ストアと型、`generateProblem` の `sourceContext` 引数まで用意済み)
-- TypeScript / SQL / HTML+CSS+JS(セレクタに「準備中」と表示のみ)。SQLとHTMLは標準入出力の比較で採点できないため、判定方式から作り直しが必要
-- `reviews` ストアは確保済みだが未使用。レビューは `submissions` 内に埋め込み保存している(レビュー再生成機能を作るときに分離予定)
+- SQL / HTML+CSS+JS(セレクタに「準備中」と表示のみ)。標準入出力の比較で採点できないため、判定方式から作り直しが必要
 
 ### テスト
 `npm test` は判定ロジック(`compareOutput`)・性質チェック・教材データの整合性を検証する。UIコンポーネントとブラウザ依存の処理(Runner / WebLLM)はテスト対象外で、ブラウザでの手動確認に頼っている。

@@ -3,6 +3,7 @@ import type { LanguageRunner } from "./types";
 import { javascriptRunner } from "./javascriptRunner";
 import { pythonRunner } from "./pythonRunner";
 import { cRunner } from "./cRunner";
+import { typescriptRunner } from "./typescriptRunner";
 
 /**
  * 言語 → Runner の対応表。
@@ -10,6 +11,7 @@ import { cRunner } from "./cRunner";
  */
 const runners: Record<string, LanguageRunner> = {
   javascript: javascriptRunner,
+  typescript: typescriptRunner,
   python: pythonRunner,
   c: cRunner,
 };

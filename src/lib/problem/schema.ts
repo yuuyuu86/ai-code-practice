@@ -1,3 +1,5 @@
+import type { Language } from "@/types/problem";
+
 /** AIが返す生の問題JSON(expected生成前) */
 export type RawGeneratedProblem = {
   title: string;
@@ -7,7 +9,7 @@ export type RawGeneratedProblem = {
   constraints: string[];
   samples: Array<{ input: string; output: string }>;
   testInputs: string[];
-  referenceSolutions: { python: string; c?: string; javascript?: string };
+  referenceSolutions: { python: string } & Partial<Record<Exclude<Language, "python">, string>>;
   hints: string[];
   explanation: string;
 };

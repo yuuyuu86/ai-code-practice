@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import type { Language } from "@/types/problem";
 import { getLanguageConfig } from "@/lib/languages";
 import { registerCompletions } from "./CompletionProvider";
+import { setMonaco } from "@/lib/editor/monacoRef";
+import { configureTypeScript } from "@/lib/editor/typescriptSetup";
 import type * as MonacoTypes from "monaco-editor";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -39,6 +41,9 @@ export default function CodeEditor({ language, value, onChange }: Props) {
           beforeMount={(monaco: typeof MonacoTypes) => {
             if (!registeredRef.current) {
               registerCompletions(monaco);
+              // TypeScript Runnerがここのコンパイラを借りるので、参照を渡しておく
+              setMonaco(monaco);
+              configureTypeScript(monaco);
               registeredRef.current = true;
             }
           }}

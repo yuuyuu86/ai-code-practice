@@ -169,7 +169,7 @@ export async function generateProblem(
         title: validation.problem.title,
         difficulty: input.difficulty,
         topic: input.topic,
-        supportedLanguages: ["c", "python", "javascript"],
+        supportedLanguages: ["c", "python", "javascript", "typescript"],
         statement: validation.problem.statement,
         inputFormat: validation.problem.inputFormat,
         outputFormat: validation.problem.outputFormat,
