@@ -37,10 +37,19 @@ export const LANGUAGES: LanguageConfig[] = [
     template: "// ここにコードを書きましょう\n// 標準入力は input(文字列) または readLine() で受け取れます\n",
     available: true,
   },
+  {
+    id: "typescript",
+    label: "TypeScript",
+    monacoLanguage: "typescript",
+    fileName: "main.ts",
+    template:
+      "// ここにコードを書きましょう\n// 標準入力は input: string または readLine(): string で受け取れます\n// 実行前に型チェックが走ります\n",
+    available: true,
+  },
 ];
 
 /** 準備中の言語(表示のみ) */
-export const COMING_SOON_LANGUAGES = ["TypeScript", "SQL", "HTML/CSS/JS"];
+export const COMING_SOON_LANGUAGES = ["SQL", "HTML/CSS/JS"];
 
 export const DIFFICULTIES: Difficulty[] = ["入門", "初級", "中級", "上級"];
 

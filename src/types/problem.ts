@@ -1,4 +1,4 @@
-export type Language = "c" | "python" | "javascript";
+export type Language = "c" | "python" | "javascript" | "typescript";
 
 export type Difficulty = "入門" | "初級" | "中級" | "上級";
 
@@ -21,11 +21,8 @@ export type Problem = {
     input: string;
     expected: string;
   }>;
-  referenceSolutions: {
-    python: string;
-    c?: string;
-    javascript?: string;
-  };
+  // pythonは必須(テストの期待出力を作るのに使う)。他言語は任意。
+  referenceSolutions: { python: string } & Partial<Record<Exclude<Language, "python">, string>>;
   hints: string[];
   explanation: string;
   sourceRefs?: Array<{

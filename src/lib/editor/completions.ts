@@ -52,4 +52,29 @@ export const COMPLETION_SNIPPETS: Record<Language, CompletionSnippet[]> = {
     },
     { label: "if", insertText: "if (${1}) {\n    ${2}\n}", detail: "条件分岐", isSnippet: true },
   ],
+  typescript: [
+    { label: "console.log", insertText: "console.log(${1});", detail: "出力", isSnippet: true },
+    { label: "const", insertText: "const ${1:name}: ${2:number} = ${3};", detail: "定数宣言(型つき)", isSnippet: true },
+    { label: "let", insertText: "let ${1:name}: ${2:number} = ${3};", detail: "変数宣言(型つき)", isSnippet: true },
+    {
+      label: "function",
+      insertText: "function ${1:name}(${2}): ${3:void} {\n    ${4}\n}",
+      detail: "関数定義(型つき)",
+      isSnippet: true,
+    },
+    {
+      label: "for",
+      insertText: "for (let ${1:i} = 0; ${1:i} < ${2:n}; ${1:i}++) {\n    ${3}\n}",
+      detail: "forループ",
+      isSnippet: true,
+    },
+    { label: "if", insertText: "if (${1}) {\n    ${2}\n}", detail: "条件分岐", isSnippet: true },
+    { label: "readLine", insertText: "readLine()", detail: "1行入力", isSnippet: false },
+    {
+      label: "interface",
+      insertText: "interface ${1:Name} {\n    ${2:field}: ${3:string};\n}",
+      detail: "インターフェース定義",
+      isSnippet: true,
+    },
+  ],
 };
