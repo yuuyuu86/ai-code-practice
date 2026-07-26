@@ -14,14 +14,23 @@
 
 元教材のリポジトリにはライセンスが設定されていないため、既定では著作権法上の
 全権利が作者に留保されています。このアプリをフォーク・改変・再配布する場合は、
-`src/data/knock100.ts` と `src/data/knockOutputSpecs.ts` を取り除くか、
-作者から別途許諾を得てください。
+作者から別途許諾を得るか、**教材モードごと取り除いてください。**
 
-該当ファイル:
+第三者の著作物にあたるのは次の1ファイルだけです。
 
 - `src/data/knock100.ts` — 100問の問題文と模範解答
-- `src/data/knockOutputSpecs.ts` — 出力形式の補足(こちらは本リポジトリ側で書き足したもの)
-- `src/data/knockTests.ts` / `src/data/knockChecks.ts` — 自動採点用のテスト入力(本リポジトリ側で作成)
+
+ただしこのファイルを消すだけではビルドが通りません。以下が参照しているため、
+教材モードをまとめて外す必要があります。
+
+- `src/components/knock/` — 教材モードのUI一式
+- `src/lib/knock/` — 出題・採点・状態管理
+- `src/lib/ai/generateKnockReview.ts` — 教材モードのAIレビュー
+- `src/data/knockOutputSpecs.ts` / `knockTests.ts` / `knockChecks.ts` — 出力形式の補足と自動採点用のテスト入力(いずれも本リポジトリ側で書いたものだが、`knock100.ts` の問題番号に紐づいているため単体では意味を持たない)
+- `src/data/knockData.test.ts` — 上記のデータ整合性テスト
+- `src/components/layout/AppShell.tsx` / `ModeTabs.tsx` — モード切り替えから教材モードを外す
+
+AI生成モードは教材データに依存していないので、教材モードを外しても単独で動きます。
 
 ## その他の依存物
 
